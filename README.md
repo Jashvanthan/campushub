@@ -1,16 +1,91 @@
-# React + Vite
+<h1 align="center">📸 CampusHub</h1>
+<h3 align="center">College Project & Event Platform</h3>
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+<p align="center">
+  An Instagram-style social platform built for college life — post events, pitch project ideas, raise funding, and collaborate with other students.
+</p>
 
-Currently, two official plugins are available:
+<p align="center">
+  <a href="https://unrivaled-licorice-e7dbcc.netlify.app/"><img src="https://img.shields.io/badge/Live%20Demo-00C7B7?style=for-the-badge&logo=netlify&logoColor=white" /></a>
+</p>
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+### 🔗 Live Demo
+**[unrivaled-licorice-e7dbcc.netlify.app](https://unrivaled-licorice-e7dbcc.netlify.app/)**
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+### 📖 About
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+CampusHub solves a common college problem: student activity, event info, project ideas, and collaboration requests are scattered across WhatsApp groups, notice boards, and word of mouth. CampusHub centralizes all of it into one social, Instagram-style feed built specifically for a college community.
+
+### ✨ Features
+
+- 📢 **Post & discover college events** — students can share upcoming events with full details
+- 📝 **Event registration** — register for events directly through the platform
+- 💡 **Pitch project ideas** — post ideas for college projects and open them up for funding or support
+- 🤝 **Collaboration** — connect with other students to team up on shared college projects
+- 🖼️ **Instagram-style feed** — familiar, scrollable, social-first UI for browsing campus activity
+- 📱 **Fully responsive** — works across devices
+
+---
+
+### 🛠️ Tech Stack
+
+**Frontend Architecture**
+<p align="left">
+  <img src="https://img.shields.io/badge/React%2019-20232A?style=flat-square&logo=react&logoColor=61DAFB" />
+  <img src="https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white" />
+  <img src="https://img.shields.io/badge/React%20Router-CA4245?style=flat-square&logo=reactrouter&logoColor=white" />
+</p>
+
+**UI & Styling**
+<p align="left">
+  <img src="https://img.shields.io/badge/Tailwind%20CSS-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" />
+  <img src="https://img.shields.io/badge/Lucide%20React-000000?style=flat-square" />
+  <img src="https://img.shields.io/badge/clsx%20%2B%20merge-333333?style=flat-square" />
+</p>
+
+**Core Logic**
+<p align="left">
+  <img src="https://img.shields.io/badge/LocalForage-FF6B6B?style=flat-square" />
+  <img src="https://img.shields.io/badge/Crypto%20(Secure%20Hashing)-4B0082?style=flat-square" />
+</p>
+
+- ⚡ **React 19** — component-based architecture
+- 🏗️ **Vite** — optimized, fast builds
+- 🧭 **React Router DOM** — multi-page navigation
+- 🎨 **Tailwind CSS** — utility-first styling
+- 🧩 **clsx + tailwind-merge** — dynamic, conflict-free class management
+- 🎯 **Lucide React** — modern icon set
+- 💾 **LocalForage** — offline data persistence
+- 🔐 **Crypto module** — secure hashing for sensitive data
+- 🧱 **Modular structure** — clean separation of concerns
+
+---
+
+### 📂 Run Locally
+
+```bash
+git clone https://github.com/Jashvanthan/campushub.git
+cd campushub
+npm install
+npm run dev
+```
+
+The app will be available at `http://localhost:5173` (default Vite port).
+
+---
+
+
+
+### 📬 Contact
+
+- 📧 [jashvan467@gmail.com](mailto:jashvan467@gmail.com)
+- 💼 [LinkedIn](https://www.linkedin.com/in/jashvanthan-ashok-90ba60338)
+- 🐙 [GitHub](https://github.com/Jashvanthan)
+
+---
+
+<p align="center"><i>⭐️ If you find this project interesting, consider starring the repo!</i></p>
