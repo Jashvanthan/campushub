@@ -72,6 +72,23 @@ export const api = {
     method: 'DELETE'
   }),
 
+  // ─── Search & Recommendations ───
+  search: (query = '', limit = 20) => {
+    const params = new URLSearchParams();
+    if (query) params.append('q', query);
+    if (limit) params.append('limit', limit);
+    return request(`/search?${params.toString()}`);
+  },
+  trackSearch: (query) => request('/search/track', {
+    method: 'POST',
+    body: JSON.stringify({ query })
+  }),
+  getRecommendedPosts: (limit = 20) => {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit);
+    return request(`/posts/recommended?${params.toString()}`);
+  },
+
   // ─── Posts & Events ───
   getPosts: (type = 'all', search = '') => {
     const params = new URLSearchParams();

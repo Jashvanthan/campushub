@@ -3,8 +3,51 @@ from datetime import datetime, timezone
 import json
 from ..models import db, Post, PostLike, PostComment, EventRegistration, Notification
 from ..utils.auth_helpers import jwt_required
+from ..services.recommendation_service import RecommendationService
 
 posts_bp = Blueprint('posts', __name__, url_prefix='/api/posts')
+
+@posts_bp.route('/recommended', methods=['GET'])
+@jwt_required(optional=True)
+def get_recommended_posts(current_user=None):
+    """
+    Get personalized recommendations for the authenticated user based on:
+    - Liked posts and topics
+    - Project similarity
+    - Search signals
+    - Profile skills and major
+    - Recency and popularity
+    Gracefully falls back to recent and trending posts if guest or new user.
+    """
+    limit = min(50, max(1, int(request.args.get('limit', 20))))
+    
+    try:
+        if current_user:
+            recommended = RecommendationService.get_recommendations(current_user, limit=limit)
+        else:
+            # Fallback for guests/unauthenticated users
+            recent_posts = Post.query.filter(
+                (Post.visibility == 'everyone') | (Post.visibility == None)
+            ).order_by(Post.created_at.desc()).limit(limit).all()
+            recommended = [p.to_dict() for p in recent_posts]
+
+        return jsonify({
+            'success': True,
+            'posts': recommended,
+            'count': len(recommended),
+            'isPersonalized': bool(current_user)
+        }), 200
+    except Exception as e:
+        # Fallback on any failure (Feature 19)
+        fallback_posts = Post.query.order_by(Post.created_at.desc()).limit(limit).all()
+        return jsonify({
+            'success': True,
+            'posts': [p.to_dict() for p in fallback_posts],
+            'count': len(fallback_posts),
+            'isPersonalized': False,
+            'fallback': True
+        }), 200
+
 
 @posts_bp.route('', methods=['GET'])
 def get_posts():

@@ -3,7 +3,7 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from .config import config_by_name
 from .models import db
-from .routes import auth_bp, posts_bp, ideas_bp, workspaces_bp, stats_bp, notifications_bp
+from .routes import auth_bp, posts_bp, ideas_bp, workspaces_bp, stats_bp, notifications_bp, search_bp
 from .utils.seed_data import seed_database
 
 def create_app(config_name=None):
@@ -45,6 +45,7 @@ def create_app(config_name=None):
     app.register_blueprint(workspaces_bp)
     app.register_blueprint(stats_bp)
     app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
+    app.register_blueprint(search_bp)
 
     # Root route
     @app.route('/')

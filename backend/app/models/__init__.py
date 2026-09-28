@@ -1,5 +1,6 @@
 from .user import db, User
 from .post import Post, PostLike, PostComment, EventRegistration
+from .search_history import SearchHistory
 from .idea import Idea, IdeaSupport, IdeaFollower, ContributionRequest
 from .workspace import (
     Workspace, WorkspaceMember, Task, Milestone,
@@ -15,6 +16,7 @@ __all__ = [
     'PostLike',
     'PostComment',
     'EventRegistration',
+    'SearchHistory',
     'Idea',
     'IdeaSupport',
     'IdeaFollower',
@@ -30,3 +32,4 @@ __all__ = [
     'ChatMessage',
     'Notification'
 ]
+

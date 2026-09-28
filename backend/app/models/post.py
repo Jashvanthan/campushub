@@ -7,7 +7,7 @@ class Post(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     type = db.Column(db.String(50), nullable=False, default='general', index=True) # project, event, idea, issue, announcement, general, achievement, etc.
-    title = db.Column(db.String(255), nullable=False)
+    title = db.Column(db.String(255), nullable=False, index=True)
     description = db.Column(db.Text, nullable=False)
     
     author_id = db.Column(db.String(80), nullable=False, index=True)
@@ -24,7 +24,7 @@ class Post(db.Model):
     event_date = db.Column(db.String(50), nullable=True)
     event_time = db.Column(db.String(50), nullable=True)
     duration = db.Column(db.String(50), nullable=True)
-    category = db.Column(db.String(100), nullable=True)
+    category = db.Column(db.String(100), nullable=True, index=True)
     organizer_name = db.Column(db.String(120), nullable=True)
     contact_info = db.Column(db.String(100), nullable=True)
     participant_type = db.Column(db.String(50), nullable=True, default='single')

@@ -16,6 +16,7 @@ import LoginPage from './components/LoginPage';
 import CreatePost from './components/posts/CreatePost';
 import IdeasPage from './components/ideas/IdeasPage';
 import WorkspacesPage from './components/workspace/WorkspacesPage';
+import SearchPage from './components/search/SearchPage';
 import JoinContributionModal from './components/ideas/JoinContributionModal';
 import ManageRequestsModal from './components/ideas/ManageRequestsModal';
 import ModalPortal from './components/common/ModalPortal';
@@ -279,6 +280,11 @@ function PostCard({
         </div>
         
         <div className="post-badges-wrap">
+          {post.recommendationReason && (
+            <span className="post-recommendation-pill" title="Recommendation explanation">
+              <Sparkles size={11} /> {post.recommendationReason}
+            </span>
+          )}
           {post.visibility && post.visibility !== 'everyone' && (
             <span className="post-visibility-pill">
               <Lock size={12} /> {visibilityLabels[post.visibility] || post.visibility}
@@ -639,6 +645,10 @@ export default function App() {
     setActiveTab('profile');
     setMobileOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    const url = `/profile/${encodeURIComponent(userKey)}`;
+    if (window.location.pathname + window.location.search !== url) {
+      try { window.history.pushState({ tab: 'profile', userKey }, '', url); } catch (_) {}
+    }
   }, []);
 
   const handleOpenMyProfile = useCallback(() => {
@@ -646,7 +656,53 @@ export default function App() {
     setActiveTab('profile');
     setMobileOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (window.location.pathname + window.location.search !== '/profile') {
+      try { window.history.pushState({ tab: 'profile' }, '', '/profile'); } catch (_) {}
+    }
   }, [session]);
+
+  // Deep-linking URL routing & browser back/forward navigation
+  useEffect(() => {
+    const parseUrlRoute = () => {
+      const pathname = (window.location.pathname || '').toLowerCase();
+      const params = new URLSearchParams(window.location.search);
+      const qParam = params.get('q') || '';
+
+      if (pathname === '/search' || pathname.startsWith('/search')) {
+        setActiveTab('search');
+        if (qParam) setSearchQuery(qParam);
+      } else if (pathname === '/projects') {
+        setActiveTab('projects');
+      } else if (pathname === '/events') {
+        setActiveTab('events');
+      } else if (pathname === '/ideas') {
+        setActiveTab('ideas');
+      } else if (pathname === '/workspaces') {
+        setActiveTab('workspaces');
+      } else if (pathname === '/issues') {
+        setActiveTab('issues');
+      } else if (pathname === '/admin') {
+        setActiveTab('admin');
+      } else if (pathname.startsWith('/profile')) {
+        const parts = pathname.split('/').filter(Boolean);
+        if (parts[1]) {
+          setSelectedProfileUser({ userKey: parts[1] });
+        }
+        setActiveTab('profile');
+      } else if (pathname === '/' || pathname === '') {
+        setActiveTab('all');
+      }
+    };
+
+    parseUrlRoute();
+
+    const handlePopState = () => {
+      parseUrlRoute();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const handleIntroComplete = useCallback(() => {
     sessionStorage.setItem('campushub_intro_played', 'true');
@@ -903,10 +959,33 @@ export default function App() {
 
   /* Restricted tabs */
   const isRestricted = isGuest
-    ? (activeTab !== 'all' && activeTab !== 'projects' && activeTab !== 'events')
+    ? (activeTab !== 'all' && activeTab !== 'projects' && activeTab !== 'events' && activeTab !== 'search')
     : isNew
-      ? (activeTab !== 'all' && activeTab !== 'projects' && activeTab !== 'events' && activeTab !== 'profile')
+      ? (activeTab !== 'all' && activeTab !== 'projects' && activeTab !== 'events' && activeTab !== 'profile' && activeTab !== 'search')
       : false;
+
+  // Load Personalized Recommendations for authenticated home feed
+  const fetchPersonalizedFeed = useCallback(async () => {
+    if (!session || !session.username || session.role === 'guest') return;
+    try {
+      const res = await api.getRecommendedPosts(40);
+      if (res && res.success && Array.isArray(res.posts) && res.posts.length > 0) {
+        setPosts(prev => {
+          const recIds = new Set(res.posts.map(p => p.id));
+          const localOnly = (prev || []).filter(p => !recIds.has(p.id) && (p.id > 1000000000000 || p.authorId === session.username));
+          return [...localOnly, ...res.posts];
+        });
+      }
+    } catch (err) {
+      console.warn('Personalized recommendations fetch error, using cached feed:', err);
+    }
+  }, [session]);
+
+  useEffect(() => {
+    if (session && !loading) {
+      fetchPersonalizedFeed();
+    }
+  }, [session, loading, fetchPersonalizedFeed]);
 
   function timeAgo(dateString) {
     if (!dateString) return 'Just now';
@@ -943,7 +1022,23 @@ export default function App() {
   const topIdeas   = (posts||[]).filter(p=>p.type==='idea').sort((a,b)=>(b.likes||0)-(a.likes||0)).slice(0,3);
 
   /* ── Handlers ── */
-  function navTo(tab) { setActiveTab(tab); setMobileOpen(false); }
+  const navTo = useCallback((tab, query = null) => {
+    setActiveTab(tab);
+    setMobileOpen(false);
+
+    let url = tab === 'all' ? '/' : `/${tab}`;
+    if (tab === 'search') {
+      const activeQ = query !== null ? query : searchQuery;
+      if (query !== null) setSearchQuery(query);
+      url = activeQ ? `/search?q=${encodeURIComponent(activeQ)}` : '/search';
+    } else if (tab === 'profile' && selectedProfileUser?.userKey) {
+      url = `/profile/${encodeURIComponent(selectedProfileUser.userKey)}`;
+    }
+
+    if (window.location.pathname + window.location.search !== url) {
+      try { window.history.pushState({ tab, query }, '', url); } catch (_) {}
+    }
+  }, [searchQuery, selectedProfileUser]);
 
   /* ── Dynamic Notifications System ── */
   const addNotification = useCallback((notifData) => {
@@ -1069,7 +1164,11 @@ export default function App() {
       broadcast('SYNC_POSTS', next);
       return next;
     });
-    try { api.toggleLike(id).catch(() => {}); } catch(e) {}
+    try { 
+      api.toggleLike(id).then(() => {
+        fetchPersonalizedFeed();
+      }).catch(() => {}); 
+    } catch(e) {}
   }
 
   function handleCommentSubmit(e, postId) {
@@ -2571,6 +2670,7 @@ export default function App() {
           <div className={`nav-content${mobileOpen ? ' open' : ''}`}>
             <ul className="nav-links">
               <li><button className={`nav-link${activeTab==='all'?' active':''}`} onClick={() => navTo('all')}>Home</button></li>
+              <li><button className={`nav-link${activeTab==='search'?' active':''}`} onClick={() => navTo('search')}>Search</button></li>
               <li><button className={`nav-link${activeTab==='projects'?' active':''}`} onClick={() => navTo('projects')}>Projects</button></li>
               <li><button className={`nav-link${activeTab==='events'?' active':''}`} onClick={() => navTo('events')}>Events</button></li>
               <li><button className={`nav-link${activeTab==='ideas'?' active':''}`} onClick={() => navTo('ideas')}>Ideas &amp; Contributions</button></li>
@@ -2585,9 +2685,26 @@ export default function App() {
             <div className="nav-actions">
               {isAuth && (
                 <>
-                  {/* Global User Search Button */}
+                  {/* Global Search Button */}
                   <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginRight: '0.25rem' }}>
-                    <button className="icon-btn" title="Search Users" onClick={() => setShowSearchModal(true)} style={{ position: 'relative', background: showSearchModal ? 'rgba(99, 102, 241, 0.15)' : 'transparent', color: showSearchModal ? 'var(--accent-primary)' : 'var(--text-secondary)', border: showSearchModal ? '1px solid rgba(99,102,241,0.3)' : '1px solid transparent', transition: 'all 0.2s ease', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>
+                    <button 
+                      className={`icon-btn${activeTab==='search'?' active':''}`} 
+                      title="Search Posts & Users (/search)" 
+                      onClick={() => navTo('search')} 
+                      style={{ 
+                        position: 'relative', 
+                        background: activeTab === 'search' ? 'rgba(99, 102, 241, 0.2)' : 'transparent', 
+                        color: activeTab === 'search' ? 'var(--accent-primary)' : 'var(--text-secondary)', 
+                        border: activeTab === 'search' ? '1px solid rgba(99,102,241,0.4)' : '1px solid transparent', 
+                        transition: 'all 0.2s ease', 
+                        width: '38px', 
+                        height: '38px', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        borderRadius: '50%' 
+                      }}
+                    >
                       <Search size={20}/>
                     </button>
                   </div>
@@ -2680,7 +2797,7 @@ export default function App() {
 
       {mobileOpen && <div className="mobile-menu-overlay" onClick={() => setMobileOpen(false)} />}
 
-      <main className={`main-content ${['admin', 'profile', 'ideas', 'workspaces'].includes(activeTab) ? 'full-width' : ''}`}>
+      <main className={`main-content ${['admin', 'profile', 'ideas', 'workspaces', 'search'].includes(activeTab) ? 'full-width' : ''}`}>
         {/* Guest banner */}
         {isGuest && (
           <div className="guest-banner">
@@ -3196,6 +3313,59 @@ export default function App() {
             />
           </section>
 
+        /* Search Page (/search) */
+        ) : activeTab === 'search' ? (
+          <section className="feed" id="feed" style={{ display: 'block' }}>
+            <SearchPage
+              initialQuery={searchQuery}
+              onQueryChange={(q) => {
+                setSearchQuery(q);
+                const url = q ? `/search?q=${encodeURIComponent(q)}` : '/search';
+                if (window.location.pathname + window.location.search !== url) {
+                  try { window.history.replaceState({ tab: 'search', query: q }, '', url); } catch (_) {}
+                }
+              }}
+              currentUser={session}
+              isAdmin={isAdmin}
+              isAuthenticated={isAuth}
+              users={users || {}}
+              localPosts={posts || []}
+              onOpenUserProfile={(userKey, author) => handleOpenUserProfile(userKey, author)}
+              renderPostCard={(post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  user={session}
+                  onLike={handleLike}
+                  onDelete={handleDeletePost}
+                  onEdit={(p) => { setEditingPost(p); setShowNewPost(true); }}
+                  onToggleComment={id => setOpenComment(p => p===id?null:id)}
+                  commentOpen={openComment === post.id}
+                  commentText={commentText}
+                  onCommentChange={setCommentText}
+                  onCommentSubmit={handleCommentSubmit}
+                  onDeleteComment={handleDeleteComment}
+                  onShare={handleShare}
+                  onToggleResolve={handleToggleResolve}
+                  onClearIssue={handleClearIssue}
+                  isAdmin={isAdmin}
+                  isAuthenticated={isAuth}
+                  contributionRequests={contributionRequests || []}
+                  workspaces={workspaces || []}
+                  ideas={ideas || []}
+                  users={users || {}}
+                  onNavigateToWorkspace={(wsId) => {
+                    setActiveWorkspaceId(wsId);
+                    navTo('workspaces');
+                  }}
+                  onJoinContribution={(p) => setJoinModalPost(p)}
+                  onManageRequests={(p) => setManageRequestsPost(p)}
+                  onOpenUserProfile={(userKey, author) => handleOpenUserProfile(userKey, author)}
+                />
+              )}
+            />
+          </section>
+
         /* Feed */
         ) : (
           <section className={`feed${activeTab !== 'admin' && activeTab !== 'profile' ? ' stagger-in' : ''}`} id="feed">
@@ -3317,7 +3487,7 @@ export default function App() {
         )}
 
         {/* Sidebar only on feed views */}
-        {activeTab !== 'admin' && activeTab !== 'profile' && activeTab !== 'ideas' && activeTab !== 'workspaces' && (
+        {activeTab !== 'admin' && activeTab !== 'profile' && activeTab !== 'ideas' && activeTab !== 'workspaces' && activeTab !== 'search' && (
           <aside className="side-panel">
             <div className="side-widget glass-panel">
               <h3>Trending Projects</h3>
@@ -3378,7 +3548,7 @@ export default function App() {
                 <input 
                   type="text" 
                   autoFocus
-                  placeholder="Search by name, @username, major, or skill..." 
+                  placeholder="Search posts, users, topics..." 
                   value={searchQuery} 
                   onChange={e => setSearchQuery(e.target.value)}
                   onKeyDown={e => {
@@ -3386,23 +3556,9 @@ export default function App() {
                       setShowSearchModal(false);
                       setSearchQuery('');
                     } else if (e.key === 'Enter') {
-                      const q = searchQuery.trim().toLowerCase();
-                      const filtered = Object.entries(users)
-                        .map(([username, u]) => ({ ...u, username }))
-                        .filter(u => 
-                          u.username?.toLowerCase().includes(q) || 
-                          u.name?.toLowerCase().includes(q) || 
-                          u.email?.toLowerCase().includes(q) || 
-                          u.major?.toLowerCase().includes(q) ||
-                          u.role?.toLowerCase().includes(q) ||
-                          (Array.isArray(u.skills) && u.skills.some(s => s.toLowerCase().includes(q)))
-                        );
-                      if (filtered.length > 0) {
-                        const topUser = filtered[0];
-                        setShowSearchModal(false);
-                        setSearchQuery('');
-                        handleOpenUserProfile(topUser.username, { name: topUser.name || topUser.username, avatar: topUser.avatar });
-                      }
+                      const q = searchQuery.trim();
+                      setShowSearchModal(false);
+                      navTo('search', q);
                     }
                   }}
                   style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', outline: 'none', width: '100%', fontSize: '1rem', fontWeight: 500 }} 

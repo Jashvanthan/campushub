@@ -12,7 +12,7 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(30), nullable=False, default='student', index=True) # admin, student, new_user, guest
-    name = db.Column(db.String(120), nullable=True)
+    name = db.Column(db.String(120), nullable=True, index=True)
     email = db.Column(db.String(120), nullable=True)
     avatar = db.Column(db.Text, nullable=True)
     institution = db.Column(db.String(200), nullable=True, default='')
