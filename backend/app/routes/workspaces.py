@@ -71,15 +71,22 @@ def get_workspace_details(workspace_id):
                 'closed': True
             }), 410
 
+    activities = Activity.query.filter_by(workspace_id=workspace_id).order_by(Activity.timestamp.desc()).all()
+    tasks = Task.query.filter_by(workspace_id=workspace_id).order_by(Task.created_at.asc()).all()
+    milestones = Milestone.query.filter_by(workspace_id=workspace_id).order_by(Milestone.created_at.asc()).all()
+    discussions = Discussion.query.filter_by(workspace_id=workspace_id).order_by(Discussion.created_at.desc()).all()
+    files = WorkspaceFile.query.filter_by(workspace_id=workspace_id).order_by(WorkspaceFile.uploaded_at.desc()).all()
+    chat_messages = ChatMessage.query.filter_by(workspace_id=workspace_id).order_by(ChatMessage.timestamp.asc()).all()
+
     return jsonify({
         'success': True,
         'workspace': ws.to_dict(),
-        'tasks': [t.to_dict() for t in ws.tasks],
-        'milestones': [m.to_dict() for m in ws.milestones],
-        'discussions': [d.to_dict() for d in ws.discussions],
-        'files': [f.to_dict() for f in ws.files],
-        'activities': [a.to_dict() for a in ws.activities],
-        'chatMessages': [c.to_dict() for c in ws.chat_messages]
+        'tasks': [t.to_dict() for t in tasks],
+        'milestones': [m.to_dict() for m in milestones],
+        'discussions': [d.to_dict() for d in discussions],
+        'files': [f.to_dict() for f in files],
+        'activities': [a.to_dict() for a in activities],
+        'chatMessages': [c.to_dict() for c in chat_messages]
     }), 200
 
 
@@ -118,8 +125,19 @@ def create_workspace(current_user):
         role='LEAD'
     )
 
+    act = Activity(
+        id=f"act-{uuid.uuid4().hex[:8]}",
+        workspace_id=ws_id,
+        actor_id=current_user.username,
+        actor_name=current_user.name or current_user.username,
+        actor_avatar=current_user.avatar,
+        description="initialized the workspace",
+        type='member'
+    )
+
     db.session.add(ws)
     db.session.add(member)
+    db.session.add(act)
     db.session.commit()
 
     return jsonify({
@@ -136,6 +154,10 @@ def update_workspace(current_user, workspace_id):
     if not ws:
         return jsonify({'success': False, 'message': 'Workspace not found'}), 404
 
+    is_member = any(m.user_id == current_user.username for m in ws.members)
+    if ws.lead_id != current_user.username and current_user.role != 'admin' and not is_member:
+        return jsonify({'success': False, 'message': 'Unauthorized to modify this workspace'}), 403
+
     data = request.get_json() or {}
     if 'name' in data: ws.name = data['name'].strip()
     if 'description' in data: ws.description = data['description'].strip()
@@ -150,6 +172,37 @@ def update_workspace(current_user, workspace_id):
         'success': True,
         'message': 'Workspace updated',
         'workspace': ws.to_dict()
+    }), 200
+
+
+@workspaces_bp.route('/<workspace_id>', methods=['DELETE'])
+@jwt_required()
+def delete_workspace(current_user, workspace_id):
+    ws = db.session.get(Workspace, workspace_id)
+    if not ws:
+        return jsonify({'success': False, 'message': 'Workspace not found'}), 404
+
+    if ws.lead_id != current_user.username and current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Unauthorized to delete this workspace'}), 403
+
+    Task.query.filter_by(workspace_id=workspace_id).delete()
+    Milestone.query.filter_by(workspace_id=workspace_id).delete()
+    WorkspaceFile.query.filter_by(workspace_id=workspace_id).delete()
+    Activity.query.filter_by(workspace_id=workspace_id).delete()
+    ChatMessage.query.filter_by(workspace_id=workspace_id).delete()
+    WorkspaceMember.query.filter_by(workspace_id=workspace_id).delete()
+    discs = Discussion.query.filter_by(workspace_id=workspace_id).all()
+    for d in discs:
+        DiscussionReply.query.filter_by(discussion_id=d.id).delete()
+        db.session.delete(d)
+
+    db.session.delete(ws)
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': 'Workspace deleted successfully',
+        'id': workspace_id
     }), 200
 
 
@@ -182,7 +235,7 @@ def leave_workspace(current_user, workspace_id):
         actor_id=current_user.username,
         actor_name=current_user.name or current_user.username,
         actor_avatar=current_user.avatar or 'CU',
-        action="left the workspace",
+        description="left the workspace",
         type='member'
     )
     db.session.add(act)
@@ -195,7 +248,7 @@ def leave_workspace(current_user, workspace_id):
 
 @workspaces_bp.route('/<workspace_id>/tasks', methods=['GET'])
 def get_tasks(workspace_id):
-    tasks = Task.query.filter_by(workspace_id=workspace_id).all()
+    tasks = Task.query.filter_by(workspace_id=workspace_id).order_by(Task.created_at.asc()).all()
     return jsonify({'success': True, 'tasks': [t.to_dict() for t in tasks]}), 200
 
 
@@ -222,7 +275,18 @@ def create_task(current_user, workspace_id):
     )
     if 'tags' in data: task.tags = data['tags']
 
+    act = Activity(
+        id=f"act-{uuid.uuid4().hex[:8]}",
+        workspace_id=workspace_id,
+        actor_id=current_user.username,
+        actor_name=current_user.name or current_user.username,
+        actor_avatar=current_user.avatar,
+        description=f"created task \"{title}\"",
+        type='task'
+    )
+
     db.session.add(task)
+    db.session.add(act)
     db.session.commit()
     return jsonify({'success': True, 'task': task.to_dict()}), 201
 
@@ -235,6 +299,7 @@ def update_task(current_user, workspace_id, task_id):
         return jsonify({'success': False, 'message': 'Task not found'}), 404
 
     data = request.get_json() or {}
+    old_status = task.status
     if 'title' in data: task.title = data['title']
     if 'description' in data: task.description = data['description']
     if 'status' in data: task.status = data['status']
@@ -244,6 +309,18 @@ def update_task(current_user, workspace_id, task_id):
     if 'assigneeName' in data: task.assignee_name = data['assigneeName']
     if 'assigneeAvatar' in data: task.assignee_avatar = data['assigneeAvatar']
     if 'tags' in data: task.tags = data['tags']
+
+    if 'status' in data and data['status'] == 'DONE' and old_status != 'DONE':
+        act = Activity(
+            id=f"act-{uuid.uuid4().hex[:8]}",
+            workspace_id=workspace_id,
+            actor_id=current_user.username,
+            actor_name=current_user.name or current_user.username,
+            actor_avatar=current_user.avatar,
+            description=f"completed task \"{task.title}\"",
+            type='task'
+        )
+        db.session.add(act)
 
     db.session.commit()
     return jsonify({'success': True, 'task': task.to_dict()}), 200
@@ -268,10 +345,11 @@ def delete_task(current_user, workspace_id, task_id):
 def create_milestone(current_user, workspace_id):
     data = request.get_json() or {}
     ms_id = data.get('id') or f"ms-{uuid.uuid4().hex[:8]}"
+    title = data.get('title', 'New Milestone').strip()
     ms = Milestone(
         id=ms_id,
         workspace_id=workspace_id,
-        title=data.get('title', 'New Milestone'),
+        title=title,
         description=data.get('description', ''),
         due_date=data.get('dueDate'),
         progress=int(data.get('progress', 0)),
@@ -279,7 +357,18 @@ def create_milestone(current_user, workspace_id):
     )
     if 'deliverables' in data: ms.deliverables = data['deliverables']
 
+    act = Activity(
+        id=f"act-{uuid.uuid4().hex[:8]}",
+        workspace_id=workspace_id,
+        actor_id=current_user.username,
+        actor_name=current_user.name or current_user.username,
+        actor_avatar=current_user.avatar,
+        description=f"created milestone \"{title}\"",
+        type='milestone'
+    )
+
     db.session.add(ms)
+    db.session.add(act)
     db.session.commit()
     return jsonify({'success': True, 'milestone': ms.to_dict()}), 201
 
@@ -292,12 +381,25 @@ def update_milestone(current_user, workspace_id, ms_id):
         return jsonify({'success': False, 'message': 'Milestone not found'}), 404
 
     data = request.get_json() or {}
+    old_status = ms.status
     if 'title' in data: ms.title = data['title']
     if 'description' in data: ms.description = data['description']
     if 'dueDate' in data: ms.due_date = data['dueDate']
     if 'progress' in data: ms.progress = int(data['progress'])
     if 'status' in data: ms.status = data['status']
     if 'deliverables' in data: ms.deliverables = data['deliverables']
+
+    if 'status' in data and data['status'] == 'COMPLETED' and old_status != 'COMPLETED':
+        act = Activity(
+            id=f"act-{uuid.uuid4().hex[:8]}",
+            workspace_id=workspace_id,
+            actor_id=current_user.username,
+            actor_name=current_user.name or current_user.username,
+            actor_avatar=current_user.avatar,
+            description=f"completed milestone \"{ms.title}\"",
+            type='milestone'
+        )
+        db.session.add(act)
 
     db.session.commit()
     return jsonify({'success': True, 'milestone': ms.to_dict()}), 200
@@ -322,17 +424,30 @@ def delete_milestone(current_user, workspace_id, ms_id):
 def create_discussion(current_user, workspace_id):
     data = request.get_json() or {}
     disc_id = data.get('id') or f"disc-{uuid.uuid4().hex[:8]}"
+    title = data.get('title', 'Discussion Topic').strip()
     disc = Discussion(
         id=disc_id,
         workspace_id=workspace_id,
-        title=data.get('title', 'Discussion Topic'),
+        title=title,
         content=data.get('content', ''),
         category=data.get('category', 'General'),
         author_id=current_user.username,
         author_name=current_user.name or current_user.username,
         author_avatar=current_user.avatar
     )
+
+    act = Activity(
+        id=f"act-{uuid.uuid4().hex[:8]}",
+        workspace_id=workspace_id,
+        actor_id=current_user.username,
+        actor_name=current_user.name or current_user.username,
+        actor_avatar=current_user.avatar,
+        description=f"started discussion \"{title}\"",
+        type='discussion'
+    )
+
     db.session.add(disc)
+    db.session.add(act)
     db.session.commit()
     return jsonify({'success': True, 'discussion': disc.to_dict()}), 201
 
@@ -525,17 +640,30 @@ def clear_all_chat_messages(current_user, workspace_id):
 def add_file(current_user, workspace_id):
     data = request.get_json() or {}
     file_id = data.get('id') or f"file-{uuid.uuid4().hex[:8]}"
+    file_name = data.get('name', 'file.txt').strip()
     f = WorkspaceFile(
         id=file_id,
         workspace_id=workspace_id,
-        name=data.get('name', 'file.txt'),
+        name=file_name,
         size=data.get('size', '1.0 MB'),
         type=data.get('type', 'application/octet-stream'),
         url=data.get('url'),
         uploader_id=current_user.username,
         uploader_name=current_user.name or current_user.username
     )
+
+    act = Activity(
+        id=f"act-{uuid.uuid4().hex[:8]}",
+        workspace_id=workspace_id,
+        actor_id=current_user.username,
+        actor_name=current_user.name or current_user.username,
+        actor_avatar=current_user.avatar,
+        description=f"uploaded file \"{file_name}\"",
+        type='file'
+    )
+
     db.session.add(f)
+    db.session.add(act)
     db.session.commit()
     return jsonify({'success': True, 'file': f.to_dict()}), 201
 

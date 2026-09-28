@@ -279,6 +279,21 @@ class Activity(db.Model):
     description = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
+    def __init__(self, **kwargs):
+        super().__init__()
+        if 'action' in kwargs and 'description' not in kwargs:
+            kwargs['description'] = kwargs.pop('action')
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    @property
+    def action(self):
+        return self.description
+
+    @action.setter
+    def action(self, val):
+        self.description = val
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -288,6 +303,7 @@ class Activity(db.Model):
             'actorName': self.actor_name or self.actor_id,
             'actorAvatar': self.actor_avatar or (self.actor_name or self.actor_id)[:2].upper(),
             'description': self.description,
+            'action': self.description,
             'timestamp': self.timestamp.isoformat() if self.timestamp else None
         }
 

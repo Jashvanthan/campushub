@@ -10,6 +10,8 @@ posts_bp = Blueprint('posts', __name__, url_prefix='/api/posts')
 def get_posts():
     post_type = request.args.get('type')
     author_id = request.args.get('authorId')
+    category = request.args.get('category')
+    department = request.args.get('department')
     search = request.args.get('q')
 
     query = Post.query
@@ -17,6 +19,10 @@ def get_posts():
         query = query.filter_by(type=post_type)
     if author_id:
         query = query.filter_by(author_id=author_id)
+    if category and category != 'all':
+        query = query.filter_by(category=category)
+    if department and department != 'all':
+        query = query.filter_by(department=department)
     if search:
         query = query.filter(
             (Post.title.ilike(f'%{search}%')) | 
@@ -60,7 +66,7 @@ def create_post(current_user):
         description=description,
         author_id=current_user.username,
         author_name=current_user.name or current_user.username,
-        author_avatar=current_user.avatar,
+        author_avatar=current_user.avatar or (current_user.name or current_user.username)[:2].upper(),
         department=data.get('department', current_user.major),
         image=data.get('image'),
         location=data.get('location', data.get('venue')),
@@ -145,6 +151,10 @@ def delete_post(current_user, post_id):
     if post.author_id != current_user.username and current_user.role != 'admin':
         return jsonify({'success': False, 'message': 'Unauthorized to delete this post'}), 403
 
+    Notification.query.filter(
+        (Notification.target_id == str(post_id)) & (Notification.target_tab == 'explore')
+    ).delete(synchronize_session=False)
+
     db.session.delete(post)
     db.session.commit()
     return jsonify({
@@ -211,7 +221,7 @@ def add_comment(current_user, post_id):
         post_id=post_id,
         author=current_user.username,
         author_name=current_user.name or current_user.username,
-        author_avatar=current_user.avatar,
+        author_avatar=current_user.avatar or (current_user.name or current_user.username)[:2].upper(),
         text=text
     )
     db.session.add(comment)
@@ -267,16 +277,25 @@ def register_for_event(current_user, post_id):
         return jsonify({'success': False, 'message': 'Event not found'}), 404
 
     data = request.get_json() or {}
-    reg = EventRegistration(
-        event_id=post_id,
-        username=current_user.username,
-        participant_type=data.get('participantType', 'single'),
-        team_name=data.get('teamName'),
-        email=data.get('email', current_user.email)
-    )
-    if 'members' in data: reg.members_json = json.dumps(data['members'])
+    
+    existing_reg = EventRegistration.query.filter_by(event_id=post_id, username=current_user.username).first()
+    if existing_reg:
+        existing_reg.participant_type = data.get('participantType', existing_reg.participant_type)
+        existing_reg.team_name = data.get('teamName', existing_reg.team_name)
+        existing_reg.email = data.get('email', existing_reg.email)
+        if 'members' in data: existing_reg.members_json = json.dumps(data['members'])
+        reg = existing_reg
+    else:
+        reg = EventRegistration(
+            event_id=post_id,
+            username=current_user.username,
+            participant_type=data.get('participantType', 'single'),
+            team_name=data.get('teamName'),
+            email=data.get('email', current_user.email)
+        )
+        if 'members' in data: reg.members_json = json.dumps(data['members'])
+        db.session.add(reg)
 
-    db.session.add(reg)
     db.session.commit()
 
     return jsonify({

@@ -280,24 +280,47 @@ def submit_contribution_request(current_user, idea_id):
         return jsonify({'success': False, 'message': 'Idea not found'}), 404
 
     data = request.get_json() or {}
-    req_id = f"req-{uuid.uuid4().hex[:8]}"
-
     role_applied = data.get('roleApplied', 'Contributor')
-    req = ContributionRequest(
-        id=req_id,
-        idea_id=idea_id,
-        idea_title=idea.title,
-        applicant_id=current_user.username,
-        applicant_name=current_user.name or current_user.username,
-        applicant_avatar=current_user.avatar,
-        role_applied=role_applied,
-        experience=data.get('experience', ''),
-        motivation=data.get('motivation', ''),
-        status='PENDING'
-    )
-    if 'skills' in data: req.skills = data['skills']
 
-    db.session.add(req)
+    # Check for existing request from this applicant for this idea
+    existing_req = ContributionRequest.query.filter_by(
+        idea_id=idea_id,
+        applicant_id=current_user.username
+    ).first()
+
+    if existing_req:
+        if existing_req.status == 'PENDING':
+            return jsonify({
+                'success': True,
+                'message': 'Your contribution request is already submitted and pending review.',
+                'request': existing_req.to_dict()
+            }), 200
+        
+        # Re-apply if previously left or rejected
+        existing_req.role_applied = role_applied
+        existing_req.experience = data.get('experience', '')
+        existing_req.motivation = data.get('motivation', '')
+        existing_req.status = 'PENDING'
+        existing_req.requested_at = datetime.now(timezone.utc)
+        existing_req.responded_at = None
+        if 'skills' in data: existing_req.skills = data['skills']
+        req = existing_req
+    else:
+        req_id = f"req-{uuid.uuid4().hex[:8]}"
+        req = ContributionRequest(
+            id=req_id,
+            idea_id=idea_id,
+            idea_title=idea.title,
+            applicant_id=current_user.username,
+            applicant_name=current_user.name or current_user.username,
+            applicant_avatar=current_user.avatar,
+            role_applied=role_applied,
+            experience=data.get('experience', ''),
+            motivation=data.get('motivation', ''),
+            status='PENDING'
+        )
+        if 'skills' in data: req.skills = data['skills']
+        db.session.add(req)
 
     # Notify idea creator
     if idea.creator_id and idea.creator_id != current_user.username:
@@ -341,18 +364,39 @@ def respond_contribution_request(current_user, req_id):
     if action == 'ACCEPT':
         req_obj.status = 'ACCEPTED'
         req_obj.responded_at = datetime.now(timezone.utc)
-        # Add to workspace members if workspace exists
-        if idea.workspace_id:
-            existing_member = WorkspaceMember.query.filter_by(workspace_id=idea.workspace_id, user_id=req_obj.applicant_id).first()
+        
+        # Resolve linked workspace
+        ws = None
+        if idea and idea.workspace_id:
+            ws = db.session.get(Workspace, idea.workspace_id)
+        if not ws and idea:
+            ws = Workspace.query.filter_by(idea_id=idea.id).first()
+
+        if ws:
+            if idea and not idea.workspace_id:
+                idea.workspace_id = ws.id
+
+            existing_member = WorkspaceMember.query.filter_by(workspace_id=ws.id, user_id=req_obj.applicant_id).first()
             if not existing_member:
                 db.session.add(WorkspaceMember(
-                    workspace_id=idea.workspace_id,
+                    workspace_id=ws.id,
                     user_id=req_obj.applicant_id,
                     name=req_obj.applicant_name,
                     username=req_obj.applicant_id,
                     avatar=req_obj.applicant_avatar,
                     role='CONTRIBUTOR'
                 ))
+                # Add activity record
+                act = Activity(
+                    id=f"act-{uuid.uuid4().hex[:8]}",
+                    workspace_id=ws.id,
+                    actor_id=req_obj.applicant_id,
+                    actor_name=req_obj.applicant_name,
+                    actor_avatar=req_obj.applicant_avatar or 'CU',
+                    description=f"joined the workspace as {req_obj.role_applied}",
+                    type='member'
+                )
+                db.session.add(act)
         
         # Notify applicant
         notif = Notification(
@@ -362,9 +406,9 @@ def respond_contribution_request(current_user, req_id):
             sender_avatar=current_user.avatar,
             type='contribution_status',
             title='Contribution Request Accepted! 🎉',
-            message=f"Your request to join \"{idea.title}\" was accepted!",
-            target_tab='workspaces' if idea.workspace_id else 'ideas',
-            target_id=idea.workspace_id or idea.id
+            message=f"Your request to join \"{idea.title if idea else 'the project'}\" was accepted!",
+            target_tab='workspaces' if (ws or (idea and idea.workspace_id)) else 'ideas',
+            target_id=(ws.id if ws else (idea.workspace_id if idea else idea.id))
         )
         db.session.add(notif)
     elif action == 'REJECT':
@@ -377,9 +421,9 @@ def respond_contribution_request(current_user, req_id):
             sender_avatar=current_user.avatar,
             type='contribution_status',
             title='Contribution Request Declined',
-            message=f"Your request to join \"{idea.title}\" was not accepted.",
+            message=f"Your request to join \"{idea.title if idea else 'the project'}\" was not accepted.",
             target_tab='ideas',
-            target_id=idea.id
+            target_id=idea.id if idea else req_obj.idea_id
         )
         db.session.add(notif)
     else:
