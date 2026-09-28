@@ -477,18 +477,46 @@ function PostCard({
             </button>
           )}
 
-          {post.type === 'issue' && isAdmin && (
-            <button className="primary-btn" style={{ background: post.resolved ? 'rgba(100,116,139,0.3)' : 'var(--success)', boxShadow: post.resolved ? 'none' : '0 4px 14px rgba(16,185,129,0.35)', padding:'0.5rem 1rem', color: post.resolved ? 'var(--text-secondary)' : '#fff' }}
-              onClick={() => onToggleResolve(post.id)}>
-              {post.resolved ? '↩ Reopen' : '✔ Mark as Done'}
-            </button>
-          )}
+          {/* Issue Resolution & Clear: STRICTLY accessible ONLY to the Issue Posted User or Admin */}
+          {post.type === 'issue' && (isAuthor || isAdmin) && (
+            <div style={{ display: 'inline-flex', gap: '0.45rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                className="primary-btn"
+                style={{
+                  background: post.resolved ? 'rgba(100,116,139,0.3)' : 'var(--success)',
+                  boxShadow: post.resolved ? 'none' : '0 4px 14px rgba(16,185,129,0.35)',
+                  padding: '0.45rem 0.9rem',
+                  fontSize: '0.85rem',
+                  color: post.resolved ? 'var(--text-secondary)' : '#fff',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  borderRadius: '8px'
+                }}
+                onClick={() => onToggleResolve(post.id)}
+                title={post.resolved ? 'Reopen this issue' : 'Mark issue as resolved'}
+              >
+                {post.resolved ? '↩ Reopen' : '✔ Mark as Done'}
+              </button>
 
-          {post.type === 'issue' && isAuthenticated && !isAdmin && (
-            <button className="primary-btn pulse-hover" style={{ background:'var(--danger)', boxShadow:'0 4px 14px rgba(239,68,68,0.3)', padding:'0.5rem 1rem' }}
-              onClick={() => onClearIssue(post.id)}>
-              <Trash2 size={15} /> Clear Issue
-            </button>
+              <button
+                className="primary-btn pulse-hover"
+                style={{
+                  background: 'var(--danger)',
+                  boxShadow: '0 4px 14px rgba(239,68,68,0.3)',
+                  padding: '0.45rem 0.9rem',
+                  fontSize: '0.85rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  borderRadius: '8px'
+                }}
+                onClick={() => onClearIssue(post.id)}
+                title="Permanently remove and clear this issue"
+              >
+                <Trash2 size={15} /> Clear Issue
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -1158,6 +1186,15 @@ export default function App() {
   }
 
   function handleToggleResolve(id) {
+    const target = (posts || []).find(p => p.id === id);
+    if (!target) return;
+    const isAuthor = Boolean(session?.username && (target.authorId === session.username || target.author?.name === session.username));
+    const isAdmin = session?.role === 'admin';
+    if (!isAuthor && !isAdmin) {
+      showToast('Only the author who posted this issue or an admin can resolve it.');
+      return;
+    }
+
     setPosts(prev => {
       const next = prev.map(p => {
         if (p.id !== id) return p;
@@ -1166,21 +1203,35 @@ export default function App() {
         return { ...p, resolved: res };
       });
       broadcast('SYNC_POSTS', next);
+      storageManager.setItem('campushub_posts', next);
       return next;
     });
   }
 
   async function handleClearIssue(id) {
-    const confirmed = await showConfirm('Are you sure you want to clear/remove this reported issue?', 'Clear Issue', {
+    const target = (posts || []).find(p => p.id === id);
+    if (!target) return;
+    const isAuthor = Boolean(session?.username && (target.authorId === session.username || target.author?.name === session.username));
+    const isAdmin = session?.role === 'admin';
+    if (!isAuthor && !isAdmin) {
+      showToast('Only the author who posted this issue or an admin can clear it.');
+      return;
+    }
+
+    const confirmed = await showConfirm('Are you sure you want to permanently clear and remove this reported issue?', 'Clear Issue', {
       isDanger: true,
       confirmText: 'Yes, Clear'
     });
     if (!confirmed) return;
+
     setPosts(prev => {
       const next = prev.filter(p => p.id !== id);
       broadcast('SYNC_POSTS', next);
+      storageManager.setItem('campushub_posts', next);
       return next;
     });
+
+    try { api.deletePost(id).catch(() => {}); } catch(e) {}
   }
 
   async function handleShare(post) {
