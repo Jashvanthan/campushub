@@ -1,0 +1,1075 @@
+{
+  "users": {
+    "admin": {
+      "id": "user-admin",
+      "username": "admin",
+      "name": "Campus Administrator",
+      "email": "admin@campushub.edu",
+      "password": "$2b$10$IyT3wpRSWlJ4mJEYnym5aeTvLm50umYPMXGbOebGrF7mTjz0YebsS",
+      "role": "admin",
+      "department": "Administration",
+      "skills": [
+        "Management",
+        "Security",
+        "System Admin"
+      ],
+      "createdAt": "2026-09-26T05:38:52.153Z"
+    },
+    "std1": {
+      "id": "user-std1",
+      "username": "std1",
+      "name": "Jashvanthan A",
+      "email": "jashvanthan@campushub.edu",
+      "password": "$2b$10$W218mp2bzemmONI177I4buiVzcVFyCycIxVLbK/8uh3iB.7TtOYFq",
+      "role": "student",
+      "department": "Computer Science & Engineering",
+      "skills": [
+        "React",
+        "Node.js",
+        "Python",
+        "AI/ML",
+        "IoT"
+      ],
+      "createdAt": "2026-09-26T05:38:52.155Z"
+    },
+    "sarah_jenkins": {
+      "id": "user-sarah",
+      "username": "sarah_jenkins",
+      "name": "Sarah Jenkins",
+      "email": "sarah@campushub.edu",
+      "password": "$2b$10$W218mp2bzemmONI177I4buiVzcVFyCycIxVLbK/8uh3iB.7TtOYFq",
+      "role": "student",
+      "department": "Computer Science",
+      "skills": [
+        "Algorithms",
+        "Python",
+        "C++"
+      ],
+      "createdAt": "2026-09-26T05:38:52.155Z"
+    },
+    "david_chen": {
+      "id": "user-david",
+      "username": "david_chen",
+      "name": "David Chen",
+      "email": "david@campushub.edu",
+      "password": "$2b$10$W218mp2bzemmONI177I4buiVzcVFyCycIxVLbK/8uh3iB.7TtOYFq",
+      "role": "student",
+      "department": "Robotics & Mechatronics",
+      "skills": [
+        "C++",
+        "ROS",
+        "Embedded Systems",
+        "IoT"
+      ],
+      "createdAt": "2026-09-26T05:38:52.155Z"
+    }
+  },
+  "posts": [
+    {
+      "id": 1,
+      "author": "Sarah Jenkins",
+      "authorId": "sarah_jenkins",
+      "role": "student",
+      "department": "Computer Science",
+      "type": "project",
+      "title": "Campus Navigation & Shortest Path AI",
+      "content": "An open-source interactive navigation engine calculating shortest accessible routes across university buildings, elevators, and campus amenities.",
+      "tags": [
+        "React",
+        "Algorithms",
+        "Dijkstra",
+        "AI"
+      ],
+      "likes": 24,
+      "likedBy": [
+        "admin"
+      ],
+      "comments": [
+        {
+          "id": 101,
+          "author": "admin",
+          "authorId": "admin",
+          "role": "admin",
+          "text": "Excellent initiative! Let us integrate this with campus signage.",
+          "createdAt": "2026-09-26T05:38:52.155Z"
+        }
+      ],
+      "createdAt": "2026-09-26T05:38:52.155Z"
+    },
+    {
+      "id": 2,
+      "author": "Tech Club",
+      "authorId": "tech_club",
+      "role": "admin",
+      "department": "Student Affairs",
+      "type": "event",
+      "title": "Campus Hackathon 2026: Cosmic Innovation",
+      "content": "Join 500+ student developers, designers, and innovators for a 36-hour hackathon building next-gen campus solutions. Cash prizes & mentorship!",
+      "tags": [
+        "Hackathon",
+        "Innovation",
+        "Prizes"
+      ],
+      "eventDetails": {
+        "eventDate": "2026-10-15",
+        "startTime": "09:00 AM",
+        "venue": "Grand Tech Auditorium & Labs",
+        "category": "Hackathon",
+        "registrationUrl": "https://campushub.edu/hackathon-2026"
+      },
+      "likes": 42,
+      "likedBy": [
+        "std1"
+      ],
+      "comments": [],
+      "createdAt": "2026-09-26T05:38:52.155Z"
+    }
+  ],
+  "registrations": {},
+  "ideas": [
+    {
+      "id": "idea-1",
+      "title": "Smart Campus Navigation & AR Wayfinding",
+      "problem": "New students, guests, and visitors frequently get lost navigating between campus blocks, lecture halls, labs, and administrative offices across our 120-acre campus.",
+      "solution": "Develop an interactive mobile-first web app with AR indoor/outdoor navigation, real-time classroom schedules, step-by-step route guidance, and wheelchair accessible paths.",
+      "impact": "Helps 15,000+ campus students, faculty, and visiting guests save time, locate examination halls instantly, and improves accessibility campus-wide.",
+      "category": "Technology",
+      "status": "IN DEVELOPMENT",
+      "tags": [
+        "AR",
+        "SmartCampus",
+        "React",
+        "ThreeJS",
+        "Accessibility"
+      ],
+      "skillsRequired": [
+        "React",
+        "Frontend",
+        "UI/UX",
+        "Node.js",
+        "Python",
+        "AI/ML"
+      ],
+      "contributionTypes": [
+        "Frontend Developer",
+        "UI/UX Designer",
+        "Backend Developer",
+        "Tester / QA"
+      ],
+      "duration": "1–3 Months",
+      "teamSize": "4–6",
+      "creatorId": "std1",
+      "creatorName": "Jashvanthan A",
+      "creatorAvatar": "JA",
+      "creatorDepartment": "Computer Science",
+      "supportedBy": [
+        "admin",
+        "std1",
+        "sarah_jenkins",
+        "david_chen",
+        "anjali_sharma"
+      ],
+      "supportCount": 42,
+      "followedBy": [
+        "admin",
+        "std1",
+        "sarah_jenkins"
+      ],
+      "progress": 70,
+      "workspaceId": "ws-1",
+      "createdAt": "2026-03-10T10:00:00.000Z",
+      "updatedAt": "2026-03-24T14:30:00.000Z",
+      "attachments": [
+        {
+          "name": "campus_navigation_architecture.pdf",
+          "size": "2.4 MB",
+          "type": "application/pdf"
+        },
+        {
+          "name": "ui_wireframes_v2.png",
+          "size": "1.1 MB",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "id": "idea-2",
+      "title": "AI Peer Tutoring & Study Group Matcher",
+      "problem": "Students struggle finding study partners and peer mentors tailored to their specific subject difficulties and available study slots.",
+      "solution": "An intelligent recommendation engine matching students based on course syllabus, weakness topics, learning pace, and mutual calendar availability.",
+      "impact": "Improves student pass rates and course mastery by 35% and fosters inclusive peer-to-peer campus learning communities.",
+      "category": "Education",
+      "status": "OPEN FOR CONTRIBUTION",
+      "tags": [
+        "AI/ML",
+        "PeerLearning",
+        "Python",
+        "FastAPI",
+        "Algorithms"
+      ],
+      "skillsRequired": [
+        "Python",
+        "AI/ML",
+        "Backend",
+        "React",
+        "UI/UX"
+      ],
+      "contributionTypes": [
+        "AI / ML Engineer",
+        "Backend Developer",
+        "UI/UX Designer",
+        "Domain Expert"
+      ],
+      "duration": "2–4 Weeks",
+      "teamSize": "2–3",
+      "creatorId": "sarah_jenkins",
+      "creatorName": "Sarah Jenkins",
+      "creatorAvatar": "SJ",
+      "creatorDepartment": "Data Science",
+      "supportedBy": [
+        "std1",
+        "sarah_jenkins",
+        "david_chen"
+      ],
+      "supportCount": 28,
+      "followedBy": [
+        "std1",
+        "sarah_jenkins"
+      ],
+      "progress": 35,
+      "workspaceId": "ws-2",
+      "createdAt": "2026-03-15T09:15:00.000Z",
+      "updatedAt": "2026-03-22T11:00:00.000Z",
+      "attachments": [
+        {
+          "name": "recommendation_algorithm_spec.pdf",
+          "size": "1.8 MB",
+          "type": "application/pdf"
+        }
+      ]
+    },
+    {
+      "id": "idea-3",
+      "title": "Campus Eco-Cycle Zero-Waste Initiative",
+      "problem": "Massive amounts of paper, plastic, and food waste are generated daily with insufficient recycling awareness and tracking metrics.",
+      "solution": "Deploy IoT smart weight bins connected to a gamified reward dashboard where students scan QR codes for recycling and earn green campus credits.",
+      "impact": "Diverts over 60% of recyclable campus waste from landfills and promotes sustainable habits among 10,000+ students.",
+      "category": "Environment",
+      "status": "PILOT / TESTING",
+      "tags": [
+        "IoT",
+        "Sustainability",
+        "GreenCampus",
+        "Hardware",
+        "Mobile"
+      ],
+      "skillsRequired": [
+        "IoT",
+        "Hardware",
+        "Backend",
+        "React",
+        "Marketing"
+      ],
+      "contributionTypes": [
+        "Hardware / IoT Specialist",
+        "Fullstack Developer",
+        "Marketing",
+        "Content Creator"
+      ],
+      "duration": "3+ Months",
+      "teamSize": "7+",
+      "creatorId": "david_chen",
+      "creatorName": "David Chen",
+      "creatorAvatar": "DC",
+      "creatorDepartment": "Electrical & Electronics",
+      "supportedBy": [
+        "admin",
+        "std1",
+        "david_chen",
+        "anjali_sharma"
+      ],
+      "supportCount": 56,
+      "followedBy": [
+        "david_chen",
+        "std1"
+      ],
+      "progress": 85,
+      "workspaceId": "ws-3",
+      "createdAt": "2026-02-20T08:30:00.000Z",
+      "updatedAt": "2026-03-25T16:45:00.000Z",
+      "attachments": [
+        {
+          "name": "iot_bin_schematics.pdf",
+          "size": "3.2 MB",
+          "type": "application/pdf"
+        }
+      ]
+    },
+    {
+      "id": "idea-4",
+      "title": "Autonomous Campus Delivery Bot",
+      "problem": "Inter-department document, lab sample, and library book transfer takes hours of manual staff transit time across large campus zones.",
+      "solution": "Design miniature autonomous wheeled rovers using LIDAR and Computer Vision to safely transport books and lab kits across designated campus pathways.",
+      "impact": "Saves 200+ staff hours weekly and provides a hands-on robotics testbed for engineering students.",
+      "category": "Innovation",
+      "status": "DISCUSSION",
+      "tags": [
+        "Robotics",
+        "ROS2",
+        "ComputerVision",
+        "Automation",
+        "Python"
+      ],
+      "skillsRequired": [
+        "Python",
+        "AI/ML",
+        "DevOps",
+        "Research"
+      ],
+      "contributionTypes": [
+        "Researcher",
+        "AI / ML Engineer",
+        "Hardware / IoT Specialist"
+      ],
+      "duration": "3+ Months",
+      "teamSize": "4–6",
+      "creatorId": "anjali_sharma",
+      "creatorName": "Anjali Sharma",
+      "creatorAvatar": "AS",
+      "creatorDepartment": "Mechanical Engineering",
+      "supportedBy": [
+        "std1",
+        "anjali_sharma"
+      ],
+      "supportCount": 19,
+      "followedBy": [
+        "anjali_sharma"
+      ],
+      "progress": 15,
+      "workspaceId": "ws-4",
+      "createdAt": "2026-03-18T14:00:00.000Z",
+      "updatedAt": "2026-03-23T10:20:00.000Z",
+      "attachments": []
+    }
+  ],
+  "contributionRequests": [
+    {
+      "id": "req-1",
+      "ideaId": "idea-1",
+      "workspaceId": "ws-1",
+      "applicantId": "priya_m",
+      "applicantName": "Priya Mohan",
+      "applicantAvatar": "PM",
+      "applicantDepartment": "Computer Science",
+      "roles": [
+        "Frontend Developer",
+        "Tester / QA"
+      ],
+      "skills": [
+        "React",
+        "JavaScript",
+        "Tailwind",
+        "Jest"
+      ],
+      "message": "I have experience building mobile PWA apps and would love to help optimize the turn-by-turn mobile viewport and write tests for the routing engine.",
+      "status": "PENDING",
+      "createdAt": "2026-03-24T10:15:00.000Z"
+    },
+    {
+      "id": "req-2",
+      "ideaId": "idea-2",
+      "workspaceId": "ws-2",
+      "applicantId": "std1",
+      "applicantName": "Jashvanthan A",
+      "applicantAvatar": "JA",
+      "applicantDepartment": "Computer Science",
+      "roles": [
+        "Backend Developer",
+        "AI / ML Engineer"
+      ],
+      "skills": [
+        "Python",
+        "FastAPI",
+        "PyTorch",
+        "Vector Search"
+      ],
+      "message": "I built semantic similarity matchers using embeddings in previous projects and can set up the core student recommendation pipeline.",
+      "status": "ACCEPTED",
+      "createdAt": "2026-03-16T11:00:00.000Z"
+    }
+  ],
+  "workspaces": [
+    {
+      "id": "ws-1",
+      "ideaId": "idea-1",
+      "name": "Smart Campus Navigation & AR Wayfinding",
+      "description": "Central development workspace for the campus AR navigation and interactive directory system.",
+      "category": "Technology",
+      "status": "IN DEVELOPMENT",
+      "progress": 70,
+      "ownerId": "std1",
+      "ownerName": "Jashvanthan A",
+      "createdAt": "2026-03-10T11:00:00.000Z",
+      "members": [
+        {
+          "userId": "std1",
+          "name": "Jashvanthan A",
+          "avatar": "JA",
+          "role": "Owner",
+          "contributionRole": "Project Lead & Architect",
+          "department": "Computer Science",
+          "joinedAt": "2026-03-10T11:00:00.000Z",
+          "tasksCompleted": 8,
+          "totalAssigned": 10
+        },
+        {
+          "userId": "sarah_jenkins",
+          "name": "Sarah Jenkins",
+          "avatar": "SJ",
+          "role": "Admin",
+          "contributionRole": "Frontend Developer",
+          "department": "Computer Science",
+          "joinedAt": "2026-03-12T09:00:00.000Z",
+          "tasksCompleted": 6,
+          "totalAssigned": 7
+        },
+        {
+          "userId": "arun_kumar",
+          "name": "Arun Kumar",
+          "avatar": "AK",
+          "role": "Contributor",
+          "contributionRole": "UI/UX Designer",
+          "department": "Design",
+          "joinedAt": "2026-03-14T14:00:00.000Z",
+          "tasksCompleted": 4,
+          "totalAssigned": 4
+        },
+        {
+          "userId": "karthik_r",
+          "name": "Karthik Raja",
+          "avatar": "KR",
+          "role": "Contributor",
+          "contributionRole": "Backend Developer",
+          "department": "Information Tech",
+          "joinedAt": "2026-03-15T16:30:00.000Z",
+          "tasksCompleted": 3,
+          "totalAssigned": 5
+        }
+      ]
+    },
+    {
+      "id": "ws-2",
+      "ideaId": "idea-2",
+      "name": "AI Peer Tutoring & Study Group Matcher",
+      "description": "Workspace for building the matching algorithm, student profile indexing, and recommendation engine.",
+      "category": "Education",
+      "status": "OPEN FOR CONTRIBUTION",
+      "progress": 35,
+      "ownerId": "sarah_jenkins",
+      "ownerName": "Sarah Jenkins",
+      "createdAt": "2026-03-15T10:00:00.000Z",
+      "members": [
+        {
+          "userId": "sarah_jenkins",
+          "name": "Sarah Jenkins",
+          "avatar": "SJ",
+          "role": "Owner",
+          "contributionRole": "AI / ML Engineer & Lead",
+          "department": "Data Science",
+          "joinedAt": "2026-03-15T10:00:00.000Z",
+          "tasksCompleted": 3,
+          "totalAssigned": 4
+        },
+        {
+          "userId": "std1",
+          "name": "Jashvanthan A",
+          "avatar": "JA",
+          "role": "Contributor",
+          "contributionRole": "Fullstack Developer",
+          "department": "Computer Science",
+          "joinedAt": "2026-03-16T12:00:00.000Z",
+          "tasksCompleted": 2,
+          "totalAssigned": 3
+        }
+      ]
+    },
+    {
+      "id": "ws-3",
+      "ideaId": "idea-3",
+      "name": "Campus Eco-Cycle Zero-Waste Initiative",
+      "description": "Hardware bin prototyping, telemetry data capture, and gamification reward portal.",
+      "category": "Environment",
+      "status": "PILOT / TESTING",
+      "progress": 85,
+      "ownerId": "david_chen",
+      "ownerName": "David Chen",
+      "createdAt": "2026-02-20T09:00:00.000Z",
+      "members": [
+        {
+          "userId": "david_chen",
+          "name": "David Chen",
+          "avatar": "DC",
+          "role": "Owner",
+          "contributionRole": "Hardware & IoT Lead",
+          "department": "Electrical & Electronics",
+          "joinedAt": "2026-02-20T09:00:00.000Z",
+          "tasksCompleted": 10,
+          "totalAssigned": 11
+        },
+        {
+          "userId": "anjali_sharma",
+          "name": "Anjali Sharma",
+          "avatar": "AS",
+          "role": "Contributor",
+          "contributionRole": "Sustainability Specialist",
+          "department": "Mechanical",
+          "joinedAt": "2026-02-22T10:00:00.000Z",
+          "tasksCompleted": 5,
+          "totalAssigned": 5
+        }
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task-101",
+      "workspaceId": "ws-1",
+      "title": "Design high-fidelity AR Wayfinding UI Mockups",
+      "description": "Create interactive Figma prototypes with mobile viewport for camera AR overlay and route steps.",
+      "assigneeId": "arun_kumar",
+      "assigneeName": "Arun Kumar",
+      "assigneeAvatar": "AK",
+      "priority": "HIGH",
+      "status": "DONE",
+      "dueDate": "2026-03-18",
+      "checklist": [
+        {
+          "id": "c1",
+          "text": "Map view with layer toggles",
+          "done": true
+        },
+        {
+          "id": "c2",
+          "text": "AR camera viewport HUD",
+          "done": true
+        },
+        {
+          "id": "c3",
+          "text": "Accessibility high-contrast mode",
+          "done": true
+        }
+      ],
+      "labels": [
+        "UI/UX",
+        "Figma",
+        "Mobile"
+      ],
+      "createdAt": "2026-03-12T10:00:00.000Z"
+    },
+    {
+      "id": "task-102",
+      "workspaceId": "ws-1",
+      "title": "Implement SVG Campus Map & Block Geocoding",
+      "description": "Render interactive vectorized SVG map of all 8 campus zones with clickable buildings and floor switchers.",
+      "assigneeId": "sarah_jenkins",
+      "assigneeName": "Sarah Jenkins",
+      "assigneeAvatar": "SJ",
+      "priority": "URGENT",
+      "status": "DONE",
+      "dueDate": "2026-03-22",
+      "checklist": [
+        {
+          "id": "c4",
+          "text": "Parse GeoJSON node coordinates",
+          "done": true
+        },
+        {
+          "id": "c5",
+          "text": "Implement pan, zoom and pinch controls",
+          "done": true
+        },
+        {
+          "id": "c6",
+          "text": "Floor-level room search indexing",
+          "done": true
+        }
+      ],
+      "labels": [
+        "Frontend",
+        "Map",
+        "React"
+      ],
+      "createdAt": "2026-03-14T11:00:00.000Z"
+    },
+    {
+      "id": "task-103",
+      "workspaceId": "ws-1",
+      "title": "Develop Shortest Path Graph Routing Algorithm",
+      "description": "Implement Dijkstra and A* pathfinding algorithm with handicap ramp preferences for campus navigation.",
+      "assigneeId": "std1",
+      "assigneeName": "Jashvanthan A",
+      "assigneeAvatar": "JA",
+      "priority": "HIGH",
+      "status": "IN PROGRESS",
+      "dueDate": "2026-03-28",
+      "checklist": [
+        {
+          "id": "c7",
+          "text": "Construct weighted graph of campus pathways",
+          "done": true
+        },
+        {
+          "id": "c8",
+          "text": "Implement multi-floor elevator/stair transitions",
+          "done": false
+        },
+        {
+          "id": "c9",
+          "text": "Benchmark path calculations < 50ms",
+          "done": true
+        }
+      ],
+      "labels": [
+        "Algorithms",
+        "Backend",
+        "Python"
+      ],
+      "createdAt": "2026-03-16T14:30:00.000Z"
+    },
+    {
+      "id": "task-104",
+      "workspaceId": "ws-1",
+      "title": "Integrate Live Room Schedule REST API",
+      "description": "Fetch real-time lecture timetables from the campus ERP to display room occupancy status.",
+      "assigneeId": "karthik_r",
+      "assigneeName": "Karthik Raja",
+      "assigneeAvatar": "KR",
+      "priority": "MEDIUM",
+      "status": "TODO",
+      "dueDate": "2026-04-02",
+      "checklist": [
+        {
+          "id": "c10",
+          "text": "Connect with Student ERP REST endpoint",
+          "done": false
+        },
+        {
+          "id": "c11",
+          "text": "Cache timetables in IndexedDB / localforage",
+          "done": false
+        }
+      ],
+      "labels": [
+        "API",
+        "Backend",
+        "Database"
+      ],
+      "createdAt": "2026-03-18T09:00:00.000Z"
+    },
+    {
+      "id": "task-105",
+      "workspaceId": "ws-1",
+      "title": "Conduct Field Testing across Block 3 and Library",
+      "description": "Run outdoor GPS and compass calibration tests on iOS Safari and Android Chrome.",
+      "assigneeId": "std1",
+      "assigneeName": "Jashvanthan A",
+      "assigneeAvatar": "JA",
+      "priority": "LOW",
+      "status": "BACKLOG",
+      "dueDate": "2026-04-10",
+      "checklist": [
+        {
+          "id": "c12",
+          "text": "Test compass sensor drift under building overhangs",
+          "done": false
+        },
+        {
+          "id": "c13",
+          "text": "Gather feedback from 10 freshman testers",
+          "done": false
+        }
+      ],
+      "labels": [
+        "Testing",
+        "QA",
+        "FieldWork"
+      ],
+      "createdAt": "2026-03-20T16:00:00.000Z"
+    }
+  ],
+  "milestones": [
+    {
+      "id": "ms-1",
+      "workspaceId": "ws-1",
+      "title": "Milestone 1: Research & Map Geocoding",
+      "description": "Complete campus topography surveys, room indexing, and vector floor plans.",
+      "dueDate": "2026-03-20",
+      "completed": true,
+      "tasks": [
+        {
+          "id": "mt-1",
+          "title": "Survey all campus blocks and ramps",
+          "done": true
+        },
+        {
+          "id": "mt-2",
+          "title": "Compile room numbering registry (750+ rooms)",
+          "done": true
+        },
+        {
+          "id": "mt-3",
+          "title": "Export vectorized SVGs per floor level",
+          "done": true
+        }
+      ]
+    },
+    {
+      "id": "ms-2",
+      "workspaceId": "ws-1",
+      "title": "Milestone 2: Navigation Engine & Core UI",
+      "description": "Ship graph routing algorithm, path visualizer, and responsive HUD interface.",
+      "dueDate": "2026-04-05",
+      "completed": false,
+      "tasks": [
+        {
+          "id": "mt-4",
+          "title": "A* Pathfinding engine implementation",
+          "done": true
+        },
+        {
+          "id": "mt-5",
+          "title": "Turn-by-turn instruction banners",
+          "done": false
+        },
+        {
+          "id": "mt-6",
+          "title": "Voice assisted guidance prompts",
+          "done": false
+        }
+      ]
+    },
+    {
+      "id": "ms-3",
+      "workspaceId": "ws-1",
+      "title": "Milestone 3: AR Viewport & Pilot Campus Launch",
+      "description": "Camera overlay integration with WebXR, QR code checkpoints, and campus rollout.",
+      "dueDate": "2026-04-25",
+      "completed": false,
+      "tasks": [
+        {
+          "id": "mt-7",
+          "title": "WebXR 3D arrow pointer overlay",
+          "done": false
+        },
+        {
+          "id": "mt-8",
+          "title": "Deploy QR checkpoint stickers at block entrances",
+          "done": false
+        },
+        {
+          "id": "mt-9",
+          "title": "Official release to student portal",
+          "done": false
+        }
+      ]
+    }
+  ],
+  "discussions": [
+    {
+      "id": "disc-1",
+      "workspaceId": "ws-1",
+      "title": "Should we use Three.js WebGL or lightweight Canvas2D for indoor AR arrows?",
+      "category": "Development",
+      "authorId": "std1",
+      "authorName": "Jashvanthan A",
+      "authorAvatar": "JA",
+      "content": "We need high framerate on low-end budget smartphones while keeping battery usage minimal. Three.js gives smooth 3D depth, but Canvas2D has near-zero bundle footprint. Thoughts team?",
+      "likes": [
+        "sarah_jenkins",
+        "arun_kumar",
+        "karthik_r"
+      ],
+      "isPinned": true,
+      "isSolved": true,
+      "createdAt": "2026-03-15T14:20:00.000Z",
+      "replies": [
+        {
+          "id": "rep-1",
+          "authorId": "sarah_jenkins",
+          "authorName": "Sarah Jenkins",
+          "authorAvatar": "SJ",
+          "text": "I ran a benchmark on mid-range Android devices. Three.js using a single lightweight arrow mesh achieved 60fps easily with under 12% CPU usage. Plus we can load models asynchronously.",
+          "createdAt": "2026-03-15T15:10:00.000Z"
+        },
+        {
+          "id": "rep-2",
+          "authorId": "arun_kumar",
+          "authorName": "Arun Kumar",
+          "authorAvatar": "AK",
+          "text": "Agreed with Sarah! The 3D depth perception from Three.js makes wayfinding much more intuitive than a flat 2D canvas arrow.",
+          "createdAt": "2026-03-15T16:05:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "disc-2",
+      "workspaceId": "ws-1",
+      "title": "Color Palette & High Contrast Mode for Outdoor Sunlight Visibility",
+      "category": "Design",
+      "authorId": "arun_kumar",
+      "authorName": "Arun Kumar",
+      "authorAvatar": "AK",
+      "content": "When walking in direct outdoor sun, subtle dark mode colors are hard to read. I have drafted an Ultra-Contrast mode with neon cyan (#00f2fe) path highlights and dark border stroke.",
+      "likes": [
+        "std1",
+        "sarah_jenkins"
+      ],
+      "isPinned": false,
+      "isSolved": false,
+      "createdAt": "2026-03-18T11:00:00.000Z",
+      "replies": [
+        {
+          "id": "rep-3",
+          "authorId": "std1",
+          "authorName": "Jashvanthan A",
+          "authorAvatar": "JA",
+          "text": "Looks super crisp! Let’s add an auto-brightness/ambient light detector toggle so it switches seamlessly when stepping outdoors.",
+          "createdAt": "2026-03-18T11:45:00.000Z"
+        }
+      ]
+    }
+  ],
+  "files": [
+    {
+      "id": "file-1",
+      "workspaceId": "ws-1",
+      "name": "campus_navigation_architecture.pdf",
+      "category": "Architecture",
+      "folder": "Documentation",
+      "uploadedBy": "Jashvanthan A",
+      "uploaderId": "std1",
+      "size": "2.4 MB",
+      "type": "application/pdf",
+      "url": "#",
+      "uploadedAt": "2026-03-11T12:00:00.000Z"
+    },
+    {
+      "id": "file-2",
+      "workspaceId": "ws-1",
+      "name": "ar_ui_wireframes_v2.fig",
+      "category": "Design",
+      "folder": "Design",
+      "uploadedBy": "Arun Kumar",
+      "uploaderId": "arun_kumar",
+      "size": "8.7 MB",
+      "type": "application/octet-stream",
+      "url": "#",
+      "uploadedAt": "2026-03-17T15:30:00.000Z"
+    },
+    {
+      "id": "file-3",
+      "workspaceId": "ws-1",
+      "name": "campus_geo_coordinates.json",
+      "category": "Development",
+      "folder": "Development",
+      "uploadedBy": "Sarah Jenkins",
+      "uploaderId": "sarah_jenkins",
+      "size": "420 KB",
+      "type": "application/json",
+      "url": "#",
+      "uploadedAt": "2026-03-21T09:40:00.000Z"
+    },
+    {
+      "id": "file-4",
+      "workspaceId": "ws-1",
+      "name": "user_testing_survey_results.xlsx",
+      "category": "Research",
+      "folder": "Research",
+      "uploadedBy": "Jashvanthan A",
+      "uploaderId": "std1",
+      "size": "1.1 MB",
+      "type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "url": "#",
+      "uploadedAt": "2026-03-23T16:15:00.000Z"
+    }
+  ],
+  "activities": [
+    {
+      "id": "act-1",
+      "workspaceId": "ws-1",
+      "actorId": "std1",
+      "actorName": "Jashvanthan A",
+      "actorAvatar": "JA",
+      "action": "created the workspace and initialized roadmap",
+      "timestamp": "2026-03-10T11:00:00.000Z",
+      "type": "workspace"
+    },
+    {
+      "id": "act-2",
+      "workspaceId": "ws-1",
+      "actorId": "arun_kumar",
+      "actorName": "Arun Kumar",
+      "actorAvatar": "AK",
+      "action": "joined as UI/UX Designer",
+      "timestamp": "2026-03-14T14:00:00.000Z",
+      "type": "member"
+    },
+    {
+      "id": "act-3",
+      "workspaceId": "ws-1",
+      "actorId": "sarah_jenkins",
+      "actorName": "Sarah Jenkins",
+      "actorAvatar": "SJ",
+      "action": "completed task: Implement SVG Campus Map & Block Geocoding",
+      "timestamp": "2026-03-22T17:30:00.000Z",
+      "type": "task"
+    },
+    {
+      "id": "act-4",
+      "workspaceId": "ws-1",
+      "actorId": "arun_kumar",
+      "actorName": "Arun Kumar",
+      "actorAvatar": "AK",
+      "action": "uploaded ar_ui_wireframes_v2.fig to Design folder",
+      "timestamp": "2026-03-17T15:30:00.000Z",
+      "type": "file"
+    },
+    {
+      "id": "act-5",
+      "workspaceId": "ws-1",
+      "actorId": "std1",
+      "actorName": "Jashvanthan A",
+      "actorAvatar": "JA",
+      "action": "completed Milestone 1: Research & Map Geocoding",
+      "timestamp": "2026-03-20T18:00:00.000Z",
+      "type": "milestone"
+    }
+  ],
+  "chatMessages": [
+    {
+      "id": "chat-1",
+      "workspaceId": "ws-1",
+      "channel": "general",
+      "senderId": "std1",
+      "senderName": "Jashvanthan A",
+      "senderAvatar": "JA",
+      "senderRole": "Owner",
+      "content": "Welcome team! 🚀 Let's kick off sprint 2 for the **Smart Campus Navigation** system. @Arun Kumar could you share the updated AR wireframes?",
+      "timestamp": "2026-03-25T09:30:00.000Z",
+      "reactions": {
+        "🚀": [
+          "arun_kumar",
+          "sarah_jenkins"
+        ],
+        "👍": [
+          "std1"
+        ]
+      }
+    },
+    {
+      "id": "chat-2",
+      "workspaceId": "ws-1",
+      "channel": "general",
+      "senderId": "arun_kumar",
+      "senderName": "Arun Kumar",
+      "senderAvatar": "AK",
+      "senderRole": "UI/UX Designer",
+      "content": "Sure! I uploaded the high-fidelity mockups in the Files tab under `Design/ar_ui_wireframes_v2.fig`. Also created a clean prototype for the indoor turn-by-turn HUD.",
+      "timestamp": "2026-03-25T09:34:00.000Z",
+      "reactions": {
+        "❤️": [
+          "std1"
+        ],
+        "🔥": [
+          "sarah_jenkins"
+        ]
+      }
+    },
+    {
+      "id": "chat-3",
+      "workspaceId": "ws-1",
+      "channel": "dev-engineers",
+      "senderId": "sarah_jenkins",
+      "senderName": "Sarah Jenkins",
+      "senderAvatar": "SJ",
+      "senderRole": "Contributor",
+      "content": "Hey devs, I just optimized the graph traversal algorithm in `navigation_engine.js`! The shortest path calculation between Block A and the Science Lab is down to 4ms in the terminal runner.",
+      "codeSnippet": {
+        "language": "javascript",
+        "title": "navigation_engine.js",
+        "code": "function findShortestRoute(graph, start, end) {\n  const distances = {};\n  const visited = new Set();\n  // Dijkstra priority traversal\n  return { path: ['Main Gate', 'Block A', 'Auditorium', 'Science Lab'], distanceMeters: 420 };\n}"
+      },
+      "timestamp": "2026-03-25T10:15:00.000Z",
+      "reactions": {
+        "💡": [
+          "std1",
+          "karthik_r"
+        ],
+        "🔥": [
+          "std1"
+        ]
+      }
+    },
+    {
+      "id": "chat-4",
+      "workspaceId": "ws-1",
+      "channel": "dev-engineers",
+      "senderId": "karthik_r",
+      "senderName": "Karthik Raja",
+      "senderAvatar": "KR",
+      "senderRole": "Backend Developer",
+      "replyTo": {
+        "senderName": "Sarah Jenkins",
+        "text": "Hey devs, I just optimized the graph traversal algorithm in navigation_engine.js..."
+      },
+      "content": "Awesome Sarah! Tested it in the integrated Workspace Terminal and all unit test assertions passed without memory leaks.",
+      "timestamp": "2026-03-25T10:20:00.000Z",
+      "reactions": {
+        "🎉": [
+          "sarah_jenkins"
+        ]
+      }
+    },
+    {
+      "id": "chat-5",
+      "workspaceId": "ws-1",
+      "channel": "announcements",
+      "senderId": "std1",
+      "senderName": "Jashvanthan A",
+      "senderAvatar": "JA",
+      "senderRole": "Owner",
+      "content": "📢 **Milestone 2 Sprint Review** scheduled for this Friday at 4:00 PM in the Innovation Lab. Please make sure all in-progress tasks are updated in the Kanban board!",
+      "timestamp": "2026-03-25T11:00:00.000Z",
+      "reactions": {
+        "👀": [
+          "arun_kumar",
+          "sarah_jenkins",
+          "karthik_r"
+        ]
+      }
+    }
+  ],
+  "terminalFiles": [
+    {
+      "id": "file-term-1",
+      "workspaceId": "ws-1",
+      "name": "navigation_engine.js",
+      "language": "javascript",
+      "content": "// CampusHub Navigation Engine - Dijkstra Campus Routing\nconsole.log(\"🚀 Initializing Campus Node Graph...\");\n\nconst CAMPUS_GRAPH = {\n  'Main Gate': { 'Admin Block': 120, 'Block A': 180, 'Library': 250 },\n  'Admin Block': { 'Main Gate': 120, 'Auditorium': 90, 'Block A': 110 },\n  'Block A': { 'Main Gate': 180, 'Admin Block': 110, 'Science Lab': 140 },\n  'Science Lab': { 'Block A': 140, 'Hostel Hub': 310, 'Library': 190 },\n  'Auditorium': { 'Admin Block': 90, 'Cafeteria': 85 },\n  'Cafeteria': { 'Auditorium': 85, 'Sports Complex': 200, 'Library': 130 },\n  'Library': { 'Main Gate': 250, 'Cafeteria': 130, 'Science Lab': 190 },\n  'Sports Complex': { 'Cafeteria': 200, 'Hostel Hub': 220 },\n  'Hostel Hub': { 'Sports Complex': 220, 'Science Lab': 310 }\n};\n\nfunction dijkstra(graph, startNode, endNode) {\n  const distances = {};\n  const previous = {};\n  const unvisited = new Set(Object.keys(graph));\n\n  for (let node of Object.keys(graph)) {\n    distances[node] = Infinity;\n    previous[node] = null;\n  }\n  distances[startNode] = 0;\n\n  while (unvisited.size > 0) {\n    let curr = null;\n    for (let node of unvisited) {\n      if (curr === null || distances[node] < distances[curr]) {\n        curr = node;\n      }\n    }\n\n    if (distances[curr] === Infinity || curr === endNode) break;\n    unvisited.delete(curr);\n\n    for (let neighbor in graph[curr]) {\n      let alt = distances[curr] + graph[curr][neighbor];\n      if (alt < distances[neighbor]) {\n        distances[neighbor] = alt;\n        previous[neighbor] = curr;\n      }\n    }\n  }\n\n  const path = [];\n  let u = endNode;\n  while (u) {\n    path.unshift(u);\n    u = previous[u];\n  }\n  return { path, totalDistanceMeters: distances[endNode] };\n}\n\nconst start = 'Main Gate';\nconst destination = 'Science Lab';\nconst result = dijkstra(CAMPUS_GRAPH, start, destination);\n\nconsole.log(`✅ Navigation Path Computed: ${result.path.join(' ➔ ')}`);\nconsole.log(`📍 Total Distance: ${result.totalDistanceMeters} meters`);\nconsole.log(`⏱️ Estimated Walking Time: ${Math.ceil(result.totalDistanceMeters / 80)} minutes`);\nconsole.table({\n  Origin: start,\n  Destination: destination,\n  Hops: result.path.length - 1,\n  Distance: `${result.totalDistanceMeters} m`,\n  Status: 'Optimal Route Ready'\n});\n"
+    },
+    {
+      "id": "file-term-2",
+      "workspaceId": "ws-1",
+      "name": "api_benchmark.js",
+      "language": "javascript",
+      "content": "// Workspace API Benchmark & Health Check\nconsole.log(\"⚡ Running CampusHub API Latency Test Suite...\");\n\nconst endpoints = [\n  { route: '/api/v1/ideas', targetMs: 150 },\n  { route: '/api/v1/workspaces/ws-1/tasks', targetMs: 120 },\n  { route: '/api/v1/workspaces/ws-1/chat', targetMs: 80 },\n  { route: '/api/v1/geo/ar-waypoints', targetMs: 200 }\n];\n\nendpoints.forEach((ep, idx) => {\n  const simulatedLatency = Math.floor(Math.random() * 60) + 40;\n  const passed = simulatedLatency <= ep.targetMs;\n  console.log(`[${idx + 1}/${endpoints.length}] ${ep.route} - ${simulatedLatency}ms (${passed ? 'PASSED ✅' : 'SLOW ⚠️'})`);\n});\n\nconsole.log(\"\\n🎉 All 4 core microservices responding under budget!\");\n"
+    },
+    {
+      "id": "file-term-3",
+      "workspaceId": "ws-1",
+      "name": "peer_matcher.py",
+      "language": "python",
+      "content": "# Python AI Student Matcher Prototype\nimport math\n\nstudents = [\n    {\"name\": \"Arun K.\", \"skills\": [\"React\", \"UI/UX\"], \"interests\": [\"AR\", \"Mobile\"]},\n    {\"name\": \"Sarah J.\", \"skills\": [\"Algorithms\", \"Python\"], \"interests\": [\"AR\", \"Cloud\"]},\n    {\"name\": \"Priya M.\", \"skills\": [\"FastAPI\", \"PostgreSQL\"], \"interests\": [\"Backend\", \"AI\"]}\n]\n\ndef calculate_jaccard_similarity(list1, list2):\n    s1, s2 = set(list1), set(list2)\n    return len(s1.intersection(s2)) / len(s1.union(s2))\n\nprint(\"=== Campus Match Score ===\")\nscore = calculate_jaccard_similarity(students[0][\"interests\"], students[1][\"interests\"])\nprint(f\"Match between {students[0]['name']} and {students[1]['name']}: {score * 100:.1f}%\")\n"
+    }
+  ]
+}
