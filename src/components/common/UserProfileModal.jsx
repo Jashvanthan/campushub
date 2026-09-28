@@ -7,67 +7,44 @@ import {
 import ModalPortal from './ModalPortal';
 import FormattedText from './FormattedText';
 
-// Fallback seed metadata for common campus members
+export function getUserInitials(name, username) {
+  const str = (name || username || '').trim();
+  if (!str) return 'NA';
+  const parts = str.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  if (str.length === 1) {
+    return str.toUpperCase();
+  }
+  return str.slice(0, 2).toUpperCase();
+}
+
+// Fallback seed metadata strictly for default system accounts
 export const DEFAULT_USER_PROFILES = {
-  sarah_jenkins: {
-    name: 'Sarah Jenkins',
-    username: 'sarah_jenkins',
-    avatar: 'SJ',
-    role: 'Student Researcher',
-    department: 'Computer Science & Engineering',
-    institution: 'Stanford University',
-    major: 'M.S. Computer Science (AI/ML)',
-    bio: 'Computer Science researcher & passionate full-stack developer. Building intelligent systems and computer vision solutions for smart campus automation.',
-    skills: ['Python', 'OpenCV', 'PyTorch', 'React', 'Node.js', 'AI/ML'],
-    joined: 'January 2025'
-  },
-  tech_club: {
-    name: 'Tech Club',
-    username: 'tech_club',
-    avatar: 'TC',
-    role: 'Official Campus Organization',
-    department: 'Student Activity Council',
-    institution: 'CampusHub Institute',
-    major: 'Developer Community',
-    bio: 'The premier student-led technology club hosting hackathons, coding workshops, developer conferences, and competitive tech events.',
-    skills: ['Events', 'Hackathons', 'Community', 'Open Source', 'Networking'],
-    joined: 'September 2024'
-  },
-  david_chen: {
-    name: 'David Chen',
-    username: 'david_chen',
-    avatar: 'DC',
-    role: 'Hardware & IoT Specialist',
-    department: 'Electrical & Electronics Engineering',
-    institution: 'CampusHub Institute',
-    major: 'B.S. Electrical & Computer Engineering',
-    bio: 'Hardware enthusiast exploring smart campus IoT, RFID sensors, robotics, and embedded systems to streamline everyday campus life.',
-    skills: ['IoT', 'C++', 'Arduino', 'Embedded Systems', 'Hardware', 'Python'],
-    joined: 'October 2024'
-  },
-  anjali_sharma: {
-    name: 'Anjali Sharma',
-    username: 'anjali_sharma',
-    avatar: 'AS',
-    role: 'Network & Cloud Engineer',
-    department: 'Information Technology',
-    institution: 'CampusHub Institute',
-    major: 'B.Tech Information Technology',
-    bio: 'IT undergraduate passionate about cloud infrastructure, computer networks, distributed systems, and collaborative web platforms.',
-    skills: ['Networking', 'Linux', 'React', 'Docker', 'JavaScript', 'SQL'],
-    joined: 'November 2024'
-  },
   std1: {
     name: 'Student Member',
-    username: 'std1',
+    username: 'student1',
     avatar: 'ST',
     role: 'Student Member',
     department: 'Computer Science',
     institution: 'CampusHub University',
     major: 'B.S. Software Engineering',
-    bio: 'Passionate undergraduate student active in campus hackathons, open source workspaces, and collaborative engineering projects.',
+    bio: 'Undergraduate student collaborator.',
     skills: ['React', 'JavaScript', 'Python', 'CSS', 'Git'],
-    joined: 'August 2024'
+    joined: 'August 2025'
+  },
+  student1: {
+    name: 'Student Member',
+    username: 'student1',
+    avatar: 'ST',
+    role: 'Student Member',
+    department: 'Computer Science',
+    institution: 'CampusHub University',
+    major: 'B.S. Software Engineering',
+    bio: 'Undergraduate student collaborator.',
+    skills: ['React', 'JavaScript', 'Python', 'CSS', 'Git'],
+    joined: 'August 2025'
   },
   admin: {
     name: 'Campus Admin',
@@ -79,7 +56,7 @@ export const DEFAULT_USER_PROFILES = {
     major: 'System Administration',
     bio: 'CampusHub central administrator managing student safety, verified announcements, hackathons, and campus workspace infrastructure.',
     skills: ['Administration', 'Moderation', 'IT Systems', 'Community Management'],
-    joined: 'January 2024'
+    joined: 'January 2025'
   }
 };
 
@@ -101,19 +78,22 @@ export default function UserProfileModal({
 }) {
   const [activeTab, setActiveTab] = useState('posts'); // 'posts' | 'contributions' | 'about'
 
-  // Resolve user profile info from users dict, fallback seed dictionary, or authorFallback
-  const rawUser = users?.[userKey] || (authorFallback?.name && Object.values(users || {}).find(u => u.name === authorFallback.name));
-  const seedInfo = DEFAULT_USER_PROFILES[userKey] || DEFAULT_USER_PROFILES[rawUser?.username] || {};
+  // Resolve user profile info from users dict, authorFallback, or session
+  const rawUser = users?.[userKey] || (authorFallback?.name && Object.values(users || {}).find(u => u.name === authorFallback.name)) || (session?.username === userKey ? session : null);
+  const seedInfo = (userKey === 'admin' || userKey === 'student1' || userKey === 'std1') ? DEFAULT_USER_PROFILES[userKey] : null;
 
-  const name = rawUser?.name || authorFallback?.name || seedInfo.name || userKey;
-  const username = rawUser?.username || seedInfo.username || userKey;
-  const avatar = rawUser?.avatar || authorFallback?.avatar || seedInfo.avatar || (name ? name.slice(0, 2).toUpperCase() : 'U');
-  const role = rawUser?.role === 'admin' ? 'Administrator' : (seedInfo.role || (rawUser?.role === 'student' ? 'Student Member' : 'Campus Member'));
-  const institution = rawUser?.institution || seedInfo.institution || 'CampusHub University';
-  const major = rawUser?.major || seedInfo.major || seedInfo.department || 'Undergraduate';
-  const bio = rawUser?.bio || seedInfo.bio || 'Campus community member participating in collaborative projects, events, and campus discussions.';
-  const skills = rawUser?.skills || seedInfo.skills || ['Campus Member', 'Collaboration', 'Problem Solving'];
-  const joinedDate = seedInfo.joined || 'Active Contributor';
+  const name = rawUser?.name || authorFallback?.name || seedInfo?.name || userKey;
+  const username = rawUser?.username || seedInfo?.username || userKey;
+  const computedInitials = getUserInitials(name, username);
+  const avatar = rawUser?.avatar || authorFallback?.avatar || seedInfo?.avatar || computedInitials;
+  const role = rawUser?.role === 'admin' ? 'Administrator' : (seedInfo?.role || (rawUser?.role === 'student' ? 'Student Member' : 'Campus Member'));
+  
+  // Strict rule: if new user does not fill details, display NA
+  const institution = rawUser?.institution && rawUser.institution.trim() !== '' ? rawUser.institution.trim() : (seedInfo?.institution || 'NA');
+  const major = rawUser?.major && rawUser.major.trim() !== '' ? rawUser.major.trim() : (seedInfo?.major || 'NA');
+  const bio = rawUser?.bio && rawUser.bio.trim() !== '' ? rawUser.bio.trim() : (seedInfo?.bio || 'NA');
+  const skills = (rawUser?.skills && Array.isArray(rawUser.skills) && rawUser.skills.length > 0) ? rawUser.skills : (seedInfo?.skills || []);
+  const joinedDate = rawUser?.joined || seedInfo?.joined || '2026';
 
   const isCurrentUser = session?.username === username || session?.username === userKey;
 
@@ -173,10 +153,10 @@ export default function UserProfileModal({
           <div className="user-profile-main-header">
             <div className="user-profile-avatar-wrapper">
               <div className="user-profile-avatar">
-                {typeof avatar === 'string' && (avatar.startsWith('http') || avatar.startsWith('data:image')) ? (
+                {typeof avatar === 'string' && (avatar.startsWith('http') || avatar.startsWith('data:image') || avatar.startsWith('blob:')) ? (
                   <img src={avatar} alt={name} className="user-profile-avatar-img" />
                 ) : (
-                  <span className="user-profile-avatar-initials">{typeof avatar === 'string' ? avatar.slice(0, 2).toUpperCase() : 'U'}</span>
+                  <span className="user-profile-avatar-initials">{computedInitials}</span>
                 )}
               </div>
               <span className="user-profile-status-online" title="Online &amp; Active"></span>
@@ -190,24 +170,20 @@ export default function UserProfileModal({
                   {role}
                 </span>
                 {isCurrentUser && (
-                  <span className="user-profile-you-badge">You</span>
+                  <span className="user-profile-you-badge">Your Profile</span>
                 )}
               </div>
               <div className="user-profile-handle">@{username}</div>
               
               <div className="user-profile-meta-chips">
-                {institution && (
-                  <div className="user-profile-meta-chip">
-                    <Building size={13} />
-                    <span>{institution}</span>
-                  </div>
-                )}
-                {major && (
-                  <div className="user-profile-meta-chip">
-                    <GraduationCap size={13} />
-                    <span>{major}</span>
-                  </div>
-                )}
+                <div className="user-profile-meta-chip">
+                  <Building size={13} />
+                  <span>{institution}</span>
+                </div>
+                <div className="user-profile-meta-chip">
+                  <GraduationCap size={13} />
+                  <span>{major}</span>
+                </div>
               </div>
             </div>
 
@@ -480,13 +456,19 @@ export default function UserProfileModal({
                 {/* Skills & Expertise */}
                 <div className="about-skills-section">
                   <h4 className="about-sub-title">Skills &amp; Campus Expertise</h4>
-                  <div className="about-skills-chips">
-                    {skills.map((s, idx) => (
-                      <span key={idx} className="skill-pill">
-                        <Tag size={12} /> {s}
-                      </span>
-                    ))}
-                  </div>
+                  {skills && skills.length > 0 ? (
+                    <div className="about-skills-chips">
+                      {skills.map((s, idx) => (
+                        <span key={idx} className="skill-pill">
+                          <Tag size={12} /> {s}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.4rem' }}>
+                      NA
+                    </div>
+                  )}
                 </div>
               </div>
             )}

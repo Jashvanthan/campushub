@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
   Code2, User, Shield, Mail, Eye, EyeOff, Sparkles, Search,
-  LogIn, UserPlus, KeyRound, CheckCircle2, AlertCircle, Users
+  LogIn, UserPlus, KeyRound, CheckCircle2, AlertCircle, Users,
+  Sun, Moon
 } from 'lucide-react';
+import { api } from '../services/api';
 
 function passwordStrength(p) {
   let score = 0;
@@ -20,10 +22,9 @@ function passwordStrength(p) {
 }
 
 /**
- * LoginPage - Exact 1:1 recovered high-fidelity cinematic login interface
- * from CampusHub live application (https://campushub-30e98.web.app/)
+ * LoginPage - Cinematic responsive login portal with full Light & Dark mode support
  */
-export default function LoginPage({ onLogin, onRegister, onForgotPassword, onResetPassword, users, onPlayIntro }) {
+export default function LoginPage({ onLogin, onRegister, onForgotPassword, onResetPassword, users, onPlayIntro, theme = 'dark', onToggleTheme }) {
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'register' | 'forgot'
   const [forgotStep, setForgotStep] = useState(1); // 1 = enter username, 2 = enter code & new pw
   const [resetCode, setResetCode] = useState('');
@@ -110,21 +111,33 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
         if (onForgotPassword) {
           const res = await onForgotPassword(u);
           if (res && res.success) {
-            setSuccessMsg(res.message || `Verification code sent to registered email for ${u}.`);
+            if (res.simulatedCode) {
+              setSuccessMsg(`Verification code sent to ${res.username || u}'s email! (Dev Code: ${res.simulatedCode})`);
+              setResetCode(res.simulatedCode);
+            } else {
+              setSuccessMsg(res.message || `Verification code sent to registered email for ${u}. Please check your inbox.`);
+            }
             setForgotStep(2);
           } else {
             setError(res?.message || 'User does not exist. Please check your username or register a new account.');
           }
         } else {
           if (users?.[u]) {
-            setSuccessMsg(`Verification code sent to email associated with ${u}.`);
+            const demoCode = Math.floor(100000 + Math.random() * 900000).toString();
+            setSuccessMsg(`Verification code sent to email associated with ${u}. (Dev Code: ${demoCode})`);
+            setResetCode(demoCode);
             setForgotStep(2);
           } else {
             setError('User does not exist. Please check your username or register a new account.');
           }
         }
       } else {
-        // Step 2: Validate new password
+        // Step 2: Validate verification code & new password
+        if (!resetCode.trim()) {
+          setError('Please enter the 6-digit verification code sent to your email.');
+          setLoading(false);
+          return;
+        }
         if (newPassword.length < 8) {
           setError('New password must be at least 8 characters long.');
           setLoading(false);
@@ -147,21 +160,26 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
         }
 
         if (onResetPassword) {
-          const res = await onResetPassword(u, newPassword, resetCode);
+          const res = await onResetPassword(u, newPassword, resetCode.trim());
           if (res && res.success) {
-            setSuccessMsg('Password has been reset successfully! You can now sign in.');
+            setSuccessMsg('Password has been reset successfully! You can now sign in with your new password.');
             setAuthMode('login');
             setForgotStep(1);
             setPassword('');
             setNewPassword('');
             setConfirmPassword('');
+            setResetCode('');
           } else {
-            setError(res?.message || 'Password reset failed. Please try again.');
+            setError(res?.message || 'Password reset failed. Please verify the code and try again.');
           }
         } else {
-          setSuccessMsg('Password has been reset successfully! You can now sign in.');
+          setSuccessMsg('Password has been reset successfully! You can now sign in with your new password.');
           setAuthMode('login');
           setForgotStep(1);
+          setPassword('');
+          setNewPassword('');
+          setConfirmPassword('');
+          setResetCode('');
         }
       }
     } else {
@@ -172,33 +190,64 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
         return;
       }
 
-      await new Promise((r) => setTimeout(r, 450));
+      // 1. Check local users first
       const usr = users?.[u];
-      if (!usr) {
-        setError('User does not exist. Please check your username or register a new account.');
+      let ok = false;
+      if (usr) {
+        if (typeof usr.password === 'string' && /^[a-f0-9]{64}$/.test(usr.password)) {
+          const enc = new TextEncoder().encode(password);
+          const buf = await crypto.subtle.digest('SHA-256', enc);
+          const hash = Array.from(new Uint8Array(buf))
+            .map((b) => b.toString(16).padStart(2, '0'))
+            .join('');
+          ok = hash === usr.password;
+        } else {
+          ok = usr.password === password;
+        }
+      }
+
+      if (ok && usr) {
+        // Background JWT token synchronization
+        try {
+          const apiRes = await api.login(u, password);
+          if (apiRes?.token) {
+            localStorage.setItem('campushub_jwt_token', apiRes.token);
+          }
+        } catch (_) {}
+
+        onLogin({
+          ...usr,
+          username: u,
+          name: usr.name || u,
+          role: usr.role || 'student',
+          avatar: usr.avatar,
+          institution: usr.institution || '',
+          major: usr.major || '',
+          bio: usr.bio || '',
+          skills: usr.skills || []
+        });
         setLoading(false);
         return;
       }
 
-      // Check password (plain or SHA-256 hash)
-      let ok = false;
-      if (/^[a-f0-9]{64}$/.test(usr.password)) {
-        const enc = new TextEncoder().encode(password);
-        const buf = await crypto.subtle.digest('SHA-256', enc);
-        const hash = Array.from(new Uint8Array(buf))
-          .map((b) => b.toString(16).padStart(2, '0'))
-          .join('');
-        ok = hash === usr.password;
-      } else {
-        ok = usr.password === password;
+      // 2. If not found locally or password was wrong locally, try backend API directly
+      try {
+        const res = await api.login(u, password);
+        if (res && res.success && res.user) {
+          if (res.token) {
+            localStorage.setItem('campushub_jwt_token', res.token);
+          }
+          onLogin(res.user);
+          setLoading(false);
+          return;
+        }
+      } catch (apiErr) {
+        console.warn('Backend API login error:', apiErr);
       }
 
-      if (ok) {
-        onLogin({
-          username: u,
-          role: usr.role,
-          avatar: usr.avatar,
-        });
+      // 3. Error reporting
+      if (!usr) {
+        setError('User does not exist. Please check your username or register a new account.');
       } else {
         setError('Incorrect password. Please verify your credentials and try again.');
       }
@@ -226,57 +275,49 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
     >
       {/* Top Fixed Login Navigation */}
       <nav className="login-nav">
-        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+        <div className="login-nav-left">
           <button
             type="button"
             onClick={() => onLogin({ username: 'guest', role: 'guest' })}
-            style={{
-              color: '#fff',
-              fontSize: '0.88rem',
-              fontWeight: 700,
-              opacity: 0.9,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.6rem',
-              background: 'rgba(255,255,255,0.08)',
-              padding: '0.55rem 1.2rem',
-              borderRadius: '12px',
-              border: '1px solid rgba(255,255,255,0.15)',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
-            onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+            className="login-guest-btn"
           >
             <Users size={16} /> Guest Access
           </button>
-          <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.15)' }} className="nav-divider" />
-          <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }} className="nav-label">
+          <div className="login-nav-divider" />
+          <span className="login-nav-label">
             Campus Collaboration Platform
           </span>
         </div>
 
-        <div style={{ display: 'flex', gap: '1.2rem', alignItems: 'center', position: 'relative' }}>
+        <div className="login-nav-right">
+          {/* Mode Changing Button */}
+          {onToggleTheme && (
+            <button
+              type="button"
+              onClick={onToggleTheme}
+              className="login-theme-toggle-btn"
+              title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              aria-label="Toggle Theme"
+            >
+              {theme === 'dark' ? (
+                <>
+                  <Sun size={16} className="theme-icon-sun" />
+                  <span className="theme-btn-text">Light</span>
+                </>
+              ) : (
+                <>
+                  <Moon size={16} className="theme-icon-moon" />
+                  <span className="theme-btn-text">Dark</span>
+                </>
+              )}
+            </button>
+          )}
+
           {onPlayIntro && (
             <button
               type="button"
               onClick={onPlayIntro}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                background: 'rgba(249, 115, 22, 0.15)',
-                border: '1px solid rgba(249, 115, 22, 0.4)',
-                borderRadius: '999px',
-                padding: '0.45rem 1rem',
-                color: '#fbbf24',
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}
-              onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(249, 115, 22, 0.25)')}
-              onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(249, 115, 22, 0.15)')}
+              className="login-replay-intro-btn"
               title="Replay Intro"
             >
               <Sparkles size={14} /> Replay Intro
@@ -285,8 +326,7 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
 
           {/* Search channel container */}
           <div
-            className="search-container"
-            style={{ position: 'relative', width: '240px' }}
+            className="login-search-wrapper"
             onClick={(e) => e.stopPropagation()}
           >
             <input
@@ -298,75 +338,39 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
                 setSearchQuery(e.target.value);
                 setShowSearchDropdown(true);
               }}
-              style={{
-                width: '100%',
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                borderRadius: '12px',
-                padding: '0.55rem 1rem 0.55rem 2.4rem',
-                color: '#fff',
-                fontSize: '0.85rem',
-                outline: 'none',
-              }}
+              className="login-search-input"
             />
             <Search
               size={15}
-              style={{
-                position: 'absolute',
-                left: '0.85rem',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'rgba(255,255,255,0.4)',
-              }}
+              className="login-search-icon"
             />
 
             {showSearchDropdown && searchQuery.trim().length > 0 && (
               <div
-                className="glass-panel"
-                style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 8px)',
-                  right: 0,
-                  width: '280px',
-                  maxHeight: '260px',
-                  overflowY: 'auto',
-                  padding: '0.75rem',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  background: 'rgba(10, 15, 30, 0.95)',
-                  backdropFilter: 'blur(20px)',
-                  borderRadius: '14px',
-                  zIndex: 100,
-                  boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
-                }}
+                className="login-search-dropdown"
               >
                 {sampleChannels.length > 0 ? (
                   sampleChannels.map((ch, idx) => (
                     <div
                       key={idx}
-                      style={{
-                        padding: '0.6rem 0.75rem',
-                        borderRadius: '8px',
-                        background: 'rgba(255,255,255,0.04)',
-                        marginBottom: '0.35rem',
-                        cursor: 'pointer',
-                      }}
+                      className="login-search-item"
                       onClick={() => {
                         setShowSearchDropdown(false);
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff' }}>{ch.name}</span>
-                        <span style={{ fontSize: '0.65rem', background: 'rgba(59,130,246,0.2)', color: '#60a5fa', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                        <span className="search-item-name">{ch.name}</span>
+                        <span className="search-item-badge">
                           {ch.category}
                         </span>
                       </div>
-                      <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>
+                      <span className="search-item-meta">
                         {ch.users} students active
                       </span>
                     </div>
                   ))
                 ) : (
-                  <div style={{ textAlign: 'center', padding: '0.75rem', color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem' }}>
+                  <div className="search-empty-state">
                     No channels found.
                   </div>
                 )}
@@ -402,22 +406,11 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
 
           <div style={{ transform: 'translateZ(60px)', width: '100%', position: 'relative', zIndex: 20 }}>
             {/* CampusHub Logo with Radiant Orange Badge */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2.5rem' }}>
-              <div
-                style={{
-                  background: 'linear-gradient(135deg, #f97316, #ea580c)',
-                  borderRadius: '16px',
-                  width: '46px',
-                  height: '46px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 8px 24px rgba(249, 115, 22, 0.4)',
-                }}
-              >
+            <div className="login-brand-header">
+              <div className="login-brand-icon-box">
                 <Code2 size={26} color="#fff" />
               </div>
-              <span style={{ color: '#fff', fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.02em' }}>
+              <span className="login-brand-name">
                 CampusHub
               </span>
             </div>
@@ -429,7 +422,7 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
               <span className="highlight-span">To CampusHub</span>
             </h1>
 
-            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.05rem', maxWidth: '440px', lineHeight: 1.6, marginBottom: '2rem' }}>
+            <p className="login-hero-desc">
               Connect, collaborate on projects, share campus ideas, and coordinate team workspaces in real time.
             </p>
           </div>
@@ -490,19 +483,13 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
             {/* Username / Account Identifier Field */}
             {authMode !== 'forgot' || forgotStep === 1 ? (
               <div className="input-container">
-                <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem', marginBottom: '0.4rem', display: 'block', fontWeight: 600 }}>
+                <label className="login-field-label">
                   {authMode === 'forgot' ? 'Username or Registered Email' : 'Username'}
                 </label>
                 <div style={{ position: 'relative' }}>
                   <User
                     size={18}
-                    style={{
-                      position: 'absolute',
-                      left: '1.2rem',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color: 'rgba(255,255,255,0.35)',
-                    }}
+                    className="login-input-icon"
                   />
                   <input
                     className="input-field"
@@ -520,19 +507,13 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
             {authMode === 'register' && (
               <>
                 <div className="input-container">
-                  <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem', marginBottom: '0.4rem', display: 'block', fontWeight: 600 }}>
+                  <label className="login-field-label">
                     Email Address
                   </label>
                   <div style={{ position: 'relative' }}>
                     <Mail
                       size={18}
-                      style={{
-                        position: 'absolute',
-                        left: '1.2rem',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        color: 'rgba(255,255,255,0.35)',
-                      }}
+                      className="login-input-icon"
                     />
                     <input
                       className="input-field"
@@ -547,7 +528,7 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
                 </div>
 
                 <div className="input-container">
-                  <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem', marginBottom: '0.4rem', display: 'block', fontWeight: 600 }}>
+                  <label className="login-field-label">
                     Phone Number (Optional)
                   </label>
                   <div style={{ position: 'relative' }}>
@@ -558,6 +539,7 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="+1 (555) 000-0000"
                       autoComplete="tel"
+                      style={{ paddingLeft: '1.4rem' }}
                     />
                   </div>
                 </div>
@@ -568,7 +550,7 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
             {authMode !== 'forgot' && (
               <div className="input-container">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                  <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem', fontWeight: 600 }}>
+                  <label className="login-field-label" style={{ marginBottom: 0 }}>
                     Password
                   </label>
                   {authMode === 'login' && (
@@ -580,14 +562,7 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
                         setError('');
                         setSuccessMsg('');
                       }}
-                      style={{
-                        fontSize: '0.78rem',
-                        color: '#f97316',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontWeight: 600,
-                      }}
+                      className="login-forgot-link"
                     >
                       Forgot Password?
                     </button>
@@ -596,13 +571,7 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
                 <div style={{ position: 'relative' }}>
                   <Shield
                     size={18}
-                    style={{
-                      position: 'absolute',
-                      left: '1.2rem',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color: 'rgba(255,255,255,0.35)',
-                    }}
+                    className="login-input-icon"
                   />
                   <input
                     className="input-field"
@@ -617,16 +586,7 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
                   <button
                     type="button"
                     onClick={() => setShowPw(!showPw)}
-                    style={{
-                      position: 'absolute',
-                      right: '1.2rem',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: 'rgba(255,255,255,0.4)',
-                    }}
+                    className="login-eye-toggle-btn"
                   >
                     {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -638,19 +598,13 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
             {authMode === 'forgot' && forgotStep === 2 && (
               <>
                 <div className="input-container">
-                  <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem', marginBottom: '0.4rem', display: 'block', fontWeight: 600 }}>
+                  <label className="login-field-label">
                     Verification Code (OTP)
                   </label>
                   <div style={{ position: 'relative' }}>
                     <KeyRound
                       size={18}
-                      style={{
-                        position: 'absolute',
-                        left: '1.2rem',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        color: 'rgba(255,255,255,0.35)',
-                      }}
+                      className="login-input-icon"
                     />
                     <input
                       className="input-field"
@@ -664,19 +618,13 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
                 </div>
 
                 <div className="input-container">
-                  <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem', marginBottom: '0.4rem', display: 'block', fontWeight: 600 }}>
+                  <label className="login-field-label">
                     New Password
                   </label>
                   <div style={{ position: 'relative' }}>
                     <Shield
                       size={18}
-                      style={{
-                        position: 'absolute',
-                        left: '1.2rem',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        color: 'rgba(255,255,255,0.35)',
-                      }}
+                      className="login-input-icon"
                     />
                     <input
                       className="input-field"
@@ -691,16 +639,7 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
                     <button
                       type="button"
                       onClick={() => setShowPw(!showPw)}
-                      style={{
-                        position: 'absolute',
-                        right: '1.2rem',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: 'rgba(255,255,255,0.4)',
-                      }}
+                      className="login-eye-toggle-btn"
                     >
                       {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
@@ -708,19 +647,13 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
                 </div>
 
                 <div className="input-container">
-                  <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem', marginBottom: '0.4rem', display: 'block', fontWeight: 600 }}>
+                  <label className="login-field-label">
                     Confirm New Password
                   </label>
                   <div style={{ position: 'relative' }}>
                     <Shield
                       size={18}
-                      style={{
-                        position: 'absolute',
-                        left: '1.2rem',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        color: 'rgba(255,255,255,0.35)',
-                      }}
+                      className="login-input-icon"
                     />
                     <input
                       className="input-field"
@@ -792,7 +725,7 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
           </form>
 
           {/* Mode Switchers */}
-          <div style={{ textAlign: 'center', fontSize: '0.88rem', color: 'rgba(255,255,255,0.65)' }}>
+          <div className="login-switch-footer">
             {authMode === 'login' ? (
               <>
                 Don&apos;t have an account?{' '}
@@ -803,14 +736,7 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
                     setError('');
                     setSuccessMsg('');
                   }}
-                  style={{
-                    color: '#f97316',
-                    fontWeight: 700,
-                    marginLeft: '0.35rem',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                  }}
+                  className="login-switch-btn"
                 >
                   Create Account
                 </button>
@@ -826,14 +752,7 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
                     setError('');
                     setSuccessMsg('');
                   }}
-                  style={{
-                    color: '#f97316',
-                    fontWeight: 700,
-                    marginLeft: '0.35rem',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                  }}
+                  className="login-switch-btn"
                 >
                   Sign In
                 </button>

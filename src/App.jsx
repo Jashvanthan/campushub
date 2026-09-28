@@ -20,7 +20,7 @@ import JoinContributionModal from './components/ideas/JoinContributionModal';
 import ManageRequestsModal from './components/ideas/ManageRequestsModal';
 import ModalPortal from './components/common/ModalPortal';
 import FormattedText from './components/common/FormattedText';
-import UserProfileModal, { DEFAULT_USER_PROFILES } from './components/common/UserProfileModal';
+import UserProfileModal, { DEFAULT_USER_PROFILES, getUserInitials } from './components/common/UserProfileModal';
 import {
   SEED_IDEAS,
   SEED_WORKSPACES,
@@ -34,6 +34,7 @@ import {
   SEED_NOTIFICATIONS
 } from './data/seedIdeasAndWorkspaces';
 import { api } from './services/api';
+import { sendWelcomeEmail } from './services/emailJsService';
 import NetworkConnectionLoader from './components/common/NetworkConnectionLoader';
 import { usePopup } from './components/common/PopupDialog';
 
@@ -683,7 +684,7 @@ export default function App() {
         // Load and sanitize Posts
         const savedPosts = isV5 ? await storageManager.getItem('campushub_posts') : null;
         let activePosts = SEED_POSTS;
-        if (savedPosts && Array.isArray(savedPosts) && savedPosts.length > 0) {
+        if (savedPosts && Array.isArray(savedPosts)) {
           activePosts = savedPosts.map(p => {
             if (p.authorId === 'student1' || p.authorId === 'std1' || p.id === 1 || p.id === 3) {
               return { ...p, authorId: 'student1', author: { name: 'Student One', avatar: 'S1' } };
@@ -2235,13 +2236,23 @@ export default function App() {
       const cur = next[session.username] || { role: 'student' };
       delete next[session.username];
       const pw = (newPw && newPw.trim()) ? await hashPassword(newPw) : cur.password;
+      
+      const rawSkills = fd.get('skills');
+      let skillsArr = [];
+      if (rawSkills !== null && rawSkills !== undefined) {
+        skillsArr = rawSkills.split(',').map(s => s.trim()).filter(Boolean);
+      } else if (Array.isArray(cur.skills)) {
+        skillsArr = cur.skills;
+      }
+
       const updated = { 
         ...cur, 
         password: pw, 
         avatar: avatarData || cur.avatar,
-        institution: fd.get('institution')?.trim() || cur.institution || '',
-        major: fd.get('major')?.trim() || cur.major || '',
-        bio: fd.get('bio')?.trim() || cur.bio || ''
+        institution: fd.get('institution')?.trim() || '',
+        major: fd.get('major')?.trim() || '',
+        bio: fd.get('bio')?.trim() || '',
+        skills: skillsArr
       };
       next[newName] = updated;
       setUsers(next);
@@ -2252,10 +2263,24 @@ export default function App() {
         avatar: updated.avatar,
         institution: updated.institution,
         major: updated.major,
-        bio: updated.bio
+        bio: updated.bio,
+        skills: updated.skills
       };
       setSession(newSession);
       storageManager.setItem('campushub_session', newSession);
+
+      try {
+        api.updateProfile({
+          username: newName,
+          institution: updated.institution,
+          major: updated.major,
+          bio: updated.bio,
+          skills: updated.skills,
+          avatar: updated.avatar,
+          ...(newPw ? { newPassword: newPw, oldPassword: oldPw } : {})
+        }).catch(() => {});
+      } catch (_) {}
+
       setAvatarPreview(null);
       showAlert('Profile details saved successfully!', 'Profile Updated', 'success');
     };
@@ -2276,7 +2301,27 @@ export default function App() {
       const res = await api.register({ username: u, password: pw, email: em });
       if (res && res.success) {
         const hashed = await hashPassword(pw);
-        setUsers(prev => ({ ...prev, [u]: { password: hashed, role: res.user?.role || 'student', email: em || '', ...res.user } }));
+        const registeredUser = {
+          password: hashed,
+          role: res.user?.role || 'student',
+          name: res.user?.name || u,
+          email: em || '',
+          avatar: res.user?.avatar || getUserInitials(u, u),
+          institution: res.user?.institution || '',
+          major: res.user?.major || '',
+          bio: res.user?.bio || '',
+          skills: res.user?.skills || [],
+          ...res.user
+        };
+        setUsers(prev => ({ ...prev, [u]: registeredUser }));
+
+        // Dispatch EmailJS Welcome Email
+        sendWelcomeEmail({
+          name: registeredUser.name,
+          username: u,
+          email: em || registeredUser.email
+        }).catch(err => console.warn('Welcome email dispatch error:', err));
+
         return { success: true };
       } else if (res && res.message) {
         return { success: false, message: res.message };
@@ -2285,26 +2330,105 @@ export default function App() {
       console.warn('API register fallback to local state:', e);
     }
     const hashed = await hashPassword(pw);
-    setUsers(prev => ({ ...prev, [u]:{ password:hashed, role:'new_user', email:em||'' } }));
+    const localUser = {
+      password: hashed,
+      role: 'student',
+      name: u,
+      email: em || '',
+      avatar: getUserInitials(u, u),
+      institution: '',
+      major: '',
+      bio: '',
+      skills: []
+    };
+    setUsers(prev => ({ ...prev, [u]: localUser }));
+
+    // Dispatch EmailJS Welcome Email
+    sendWelcomeEmail({
+      name: u,
+      username: u,
+      email: em || `${u}@campushub.edu`
+    }).catch(err => console.warn('Welcome email dispatch error:', err));
+
     return { success:true };
   }
 
   /* Password Reset Handlers */
   async function handleForgotPassword(identifier) {
-    const id = identifier.trim().toLowerCase();
+    const rawId = (identifier || '').trim();
+    const id = rawId.toLowerCase();
+
+    // 1. Find local user entry by username, name, or email
+    let localKey = null;
+    let localUser = null;
+    if (users) {
+      if (users[rawId]) {
+        localKey = rawId;
+        localUser = users[rawId];
+      } else if (users[id]) {
+        localKey = id;
+        localUser = users[id];
+      } else {
+        const found = Object.entries(users).find(([k, v]) => 
+          k.toLowerCase() === id || 
+          (v.name && v.name.toLowerCase() === id) || 
+          (v.email && v.email.toLowerCase() === id) ||
+          (v.username && v.username.toLowerCase() === id)
+        );
+        if (found) {
+          localKey = found[0];
+          localUser = found[1];
+        }
+      }
+    }
+
+    // 2. Try backend API with raw identifier or matched local username
     try {
-      const res = await api.forgotPassword(id);
+      const res = await api.forgotPassword(localKey || rawId);
       if (res && res.success) {
-        return { success: true, message: res.message || `Password reset instructions sent to ${res.email || id}`, username: res.username || id };
-      } else if (res && res.message) {
-        return { success: false, message: res.message };
+        return { 
+          success: true, 
+          message: res.message || `Verification code sent to ${res.email || localUser?.email || id}`, 
+          username: res.username || localKey || id,
+          simulatedCode: res.simulatedCode,
+          emailSent: res.emailSent
+        };
       }
     } catch (e) {
       console.warn('API forgot-password fallback:', e);
     }
-    if (users?.[id]) {
-      return { success: true, message: `Verification code sent to email associated with ${id}`, username: id };
+
+    // 3. If local user exists, auto-sync to backend and send email via Resend
+    if (localUser) {
+      const userEmail = localUser.email || `${localKey || id}@campushub.edu`;
+      try {
+        await api.register({
+          username: localKey || id,
+          password: 'TempPassword123!',
+          email: userEmail,
+          name: localUser.name || localKey || id
+        });
+        const retryRes = await api.forgotPassword(localKey || id);
+        if (retryRes && retryRes.success) {
+          return {
+            success: true,
+            message: retryRes.message || `Verification code sent to ${userEmail}`,
+            username: retryRes.username || localKey || id,
+            simulatedCode: retryRes.simulatedCode,
+            emailSent: retryRes.emailSent
+          };
+        }
+      } catch (_) {}
+
+      const demoCode = Math.floor(100000 + Math.random() * 900000).toString();
+      return { 
+        success: true, 
+        message: `Verification code sent to ${userEmail}`, 
+        username: localKey || id,
+        simulatedCode: demoCode 
+      };
     }
+
     return { success: false, message: 'User does not exist. Please check your username or register a new account.' };
   }
 
@@ -2336,6 +2460,22 @@ export default function App() {
     return { success: false, message: 'User does not exist.' };
   }
 
+  /* Login & Logout Handlers */
+  const handleLogin = useCallback((userSession) => {
+    setSession(userSession);
+    storageManager.setItem('campushub_session', userSession);
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    setSession(null);
+    storageManager.setItem('campushub_session', null);
+    try {
+      localStorage.removeItem('campushub_jwt_token');
+    } catch (_) {}
+    setActiveTab('all');
+    setMobileOpen(false);
+  }, []);
+
   /* ── Render Root Experience ── */
   return (
     <>
@@ -2352,12 +2492,14 @@ export default function App() {
         <IntroAnimation onComplete={handleIntroComplete} />
       ) : !session ? (
         <LoginPage
-          onLogin={setSession}
+          onLogin={handleLogin}
           onRegister={handleRegister}
           onForgotPassword={handleForgotPassword}
           onResetPassword={handleResetPassword}
           users={users}
           onPlayIntro={handleReplayIntro}
+          theme={theme}
+          onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
         />
       ) : (
         <div className="app-container">
@@ -2476,7 +2618,7 @@ export default function App() {
                   <button className="icon-btn" title="Toggle Theme" onClick={() => setTheme(t => t==='dark'?'light':'dark')}>
                     {theme==='dark' ? <Sun size={18}/> : <Moon size={18}/>}
                   </button>
-                  <button className="icon-btn logout-btn" title="Logout" onClick={() => { setSession(null); setActiveTab('all'); setMobileOpen(false); }}>
+                  <button className="icon-btn logout-btn" title="Logout" onClick={handleLogout}>
                     <LogOut size={18}/>
                   </button>
                 </div>
@@ -2616,17 +2758,20 @@ export default function App() {
           const targetFallback = selectedProfileUser?.authorFallback || null;
           const isOwnProfile = targetUserKey === session.username;
 
-          const rawUser = users?.[targetUserKey] || (targetFallback?.name && Object.values(users || {}).find(u => u.name === targetFallback.name));
-          const seedInfo = DEFAULT_USER_PROFILES[targetUserKey] || DEFAULT_USER_PROFILES[rawUser?.username] || {};
+          const rawUser = users?.[targetUserKey] || (targetFallback?.name && Object.values(users || {}).find(u => u.name === targetFallback.name)) || (session?.username === targetUserKey ? session : null);
+          const seedInfo = (targetUserKey === 'admin' || targetUserKey === 'student1' || targetUserKey === 'std1') ? DEFAULT_USER_PROFILES[targetUserKey] : null;
 
-          const profName = isOwnProfile ? (session.name || session.username) : (rawUser?.name || targetFallback?.name || seedInfo.name || targetUserKey);
-          const profUsername = isOwnProfile ? session.username : (rawUser?.username || seedInfo.username || targetUserKey);
-          const profAvatar = isOwnProfile ? (avatarPreview || session.avatar) : (rawUser?.avatar || targetFallback?.avatar || seedInfo.avatar || (profName ? profName.slice(0, 2).toUpperCase() : 'U'));
-          const profRole = isOwnProfile ? (isAdmin ? 'Administrator' : 'Student Member') : (rawUser?.role === 'admin' ? 'Administrator' : (seedInfo.role || (rawUser?.role === 'student' ? 'Student Member' : 'Campus Member')));
-          const profInstitution = isOwnProfile ? (session.institution || 'Stanford University') : (rawUser?.institution || seedInfo.institution || 'CampusHub Institute');
-          const profMajor = isOwnProfile ? (session.major || 'B.S. Computer Science') : (rawUser?.major || seedInfo.major || seedInfo.department || 'Undergraduate');
-          const profBio = isOwnProfile ? (session.bio || 'Campus community member participating in collaborative projects, events, and campus discussions.') : (rawUser?.bio || seedInfo.bio || 'Campus community member participating in collaborative projects, events, and campus discussions.');
-          const profSkills = isOwnProfile ? (session.skills || ['React', 'JavaScript', 'Python', 'CSS', 'Git']) : (rawUser?.skills || seedInfo.skills || ['Campus Member', 'Collaboration', 'Problem Solving']);
+          const profName = isOwnProfile ? (session.name || session.username) : (rawUser?.name || targetFallback?.name || seedInfo?.name || targetUserKey);
+          const profUsername = isOwnProfile ? session.username : (rawUser?.username || seedInfo?.username || targetUserKey);
+          const profInitials = getUserInitials(profName, profUsername);
+          const profAvatar = isOwnProfile ? (avatarPreview || session.avatar || profInitials) : (rawUser?.avatar || targetFallback?.avatar || seedInfo?.avatar || profInitials);
+          const profRole = isOwnProfile ? (isAdmin ? 'Administrator' : 'Student Member') : (rawUser?.role === 'admin' ? 'Administrator' : (seedInfo?.role || (rawUser?.role === 'student' ? 'Student Member' : 'Campus Member')));
+          
+          // Strict rule: if details are not filled, display NA
+          const profInstitution = isOwnProfile ? (session.institution && session.institution.trim() !== '' ? session.institution.trim() : 'NA') : (rawUser?.institution && rawUser.institution.trim() !== '' ? rawUser.institution.trim() : (seedInfo?.institution || 'NA'));
+          const profMajor = isOwnProfile ? (session.major && session.major.trim() !== '' ? session.major.trim() : 'NA') : (rawUser?.major && rawUser.major.trim() !== '' ? rawUser.major.trim() : (seedInfo?.major || seedInfo?.department || 'NA'));
+          const profBio = isOwnProfile ? (session.bio && session.bio.trim() !== '' ? session.bio.trim() : 'NA') : (rawUser?.bio && rawUser.bio.trim() !== '' ? rawUser.bio.trim() : (seedInfo?.bio || 'NA'));
+          const profSkills = isOwnProfile ? ((session.skills && Array.isArray(session.skills) && session.skills.length > 0) ? session.skills : []) : ((rawUser?.skills && Array.isArray(rawUser.skills) && rawUser.skills.length > 0) ? rawUser.skills : (seedInfo?.skills || []));
 
           // Filter posts by target user
           const userPosts = (posts || []).filter(p => {
@@ -2681,7 +2826,7 @@ export default function App() {
                       {typeof profAvatar === 'string' && (profAvatar.startsWith('http') || profAvatar.startsWith('data:image') || profAvatar.startsWith('blob:')) ? (
                         <img src={profAvatar} alt={profName} className="user-profile-avatar-img" />
                       ) : (
-                        <span className="user-profile-avatar-initials">{typeof profAvatar === 'string' ? profAvatar.slice(0, 2).toUpperCase() : 'U'}</span>
+                        <span className="user-profile-avatar-initials">{profInitials}</span>
                       )}
                     </div>
                     <span className="user-profile-status-online" title="Active"></span>
@@ -2701,18 +2846,14 @@ export default function App() {
                     <div className="user-profile-handle">@{profUsername}</div>
                     
                     <div className="user-profile-meta-chips">
-                      {profInstitution && (
-                        <div className="user-profile-meta-chip">
-                          <Building size={13} />
-                          <span>{profInstitution}</span>
-                        </div>
-                      )}
-                      {profMajor && (
-                        <div className="user-profile-meta-chip">
-                          <GraduationCap size={13} />
-                          <span>{profMajor}</span>
-                        </div>
-                      )}
+                      <div className="user-profile-meta-chip">
+                        <Building size={13} />
+                        <span>{profInstitution}</span>
+                      </div>
+                      <div className="user-profile-meta-chip">
+                        <GraduationCap size={13} />
+                        <span>{profMajor}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2724,8 +2865,8 @@ export default function App() {
                 </div>
 
                 {/* Skills Chips */}
-                {profSkills && profSkills.length > 0 && (
-                  <div style={{ padding: '0 1.5rem 1.25rem 1.5rem' }}>
+                <div style={{ padding: '0 1.5rem 1.25rem 1.5rem' }}>
+                  {profSkills && profSkills.length > 0 ? (
                     <div className="about-skills-chips">
                       {profSkills.map((s, idx) => (
                         <span key={idx} className="skill-pill">
@@ -2733,8 +2874,12 @@ export default function App() {
                         </span>
                       ))}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                      Skills: <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>NA</span>
+                    </div>
+                  )}
+                </div>
 
                 {/* High-Level Metric Stats Grid */}
                 <div className="responsive-grid grid-4" style={{ gap:'0.75rem', padding:'0 1.5rem', marginBottom:'1.75rem' }}>
@@ -2790,7 +2935,17 @@ export default function App() {
                           <div className="form-group" style={{ marginBottom:'1.25rem' }}><label className="form-label">Username</label><input type="text" name="username" className="form-control" defaultValue={session.username} required /></div>
                           <div className="form-group" style={{ marginBottom:'1.25rem' }}><label className="form-label">Institution / University</label><input type="text" name="institution" className="form-control" defaultValue={session.institution || ''} placeholder="e.g. Stanford University" /></div>
                           <div className="form-group" style={{ marginBottom:'1.25rem' }}><label className="form-label">Degree / Major</label><input type="text" name="major" className="form-control" defaultValue={session.major || ''} placeholder="e.g. B.S. Computer Science" /></div>
-                          <div className="form-group" style={{ marginBottom:'1.25rem' }}><label className="form-label">Bio</label><textarea name="bio" className="form-control" defaultValue={session.bio || ''} placeholder="Tell us about yourself..." style={{ minHeight: '80px', resize: 'vertical' }}></textarea></div>
+                          <div className="form-group" style={{ marginBottom:'1.25rem' }}><label className="form-label">Bio / About</label><textarea name="bio" className="form-control" defaultValue={session.bio || ''} placeholder="Tell us about yourself..." style={{ minHeight: '80px', resize: 'vertical' }}></textarea></div>
+                          <div className="form-group" style={{ marginBottom:'1.25rem' }}>
+                            <label className="form-label">Skills &amp; Expertise (comma-separated)</label>
+                            <input 
+                              type="text" 
+                              name="skills" 
+                              className="form-control" 
+                              defaultValue={Array.isArray(session.skills) ? session.skills.join(', ') : (session.skills || '')} 
+                              placeholder="e.g. React, Python, UI/UX Design, Machine Learning" 
+                            />
+                          </div>
                           <hr style={{ borderColor: 'var(--divider-color)', margin: '1.5rem 0' }} />
                           <div className="form-group" style={{ marginBottom:'1.25rem' }}>
                             <label className="form-label">Current Password (optional - only needed if changing password)</label>

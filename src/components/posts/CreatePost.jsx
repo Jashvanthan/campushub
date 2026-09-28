@@ -831,7 +831,7 @@ export default function CreatePost({
                       onKeyUp={updateActiveFormats}
                       onMouseUp={updateActiveFormats}
                       onPaste={handleEditorPaste}
-                      data-placeholder="Write something for your campus community... (Highlight text and click Bold to format interactively with no * symbols)"
+                      data-placeholder="Write something for your campus community..."
                       role="textbox"
                       aria-multiline="true"
                       spellCheck="true"

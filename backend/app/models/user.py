@@ -15,15 +15,15 @@ class User(db.Model):
     name = db.Column(db.String(120), nullable=True)
     email = db.Column(db.String(120), nullable=True)
     avatar = db.Column(db.Text, nullable=True)
-    institution = db.Column(db.String(200), nullable=True, default='CampusHub University')
-    major = db.Column(db.String(200), nullable=True, default='Undergraduate')
-    bio = db.Column(db.Text, nullable=True)
+    institution = db.Column(db.String(200), nullable=True, default='')
+    major = db.Column(db.String(200), nullable=True, default='')
+    bio = db.Column(db.Text, nullable=True, default='')
     skills_json = db.Column(db.Text, nullable=True, default='[]')
     joined_date = db.Column(db.String(50), nullable=True, default='2026')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    def __init__(self, username=None, password_hash=None, role='student', name=None, email=None, avatar=None, institution='CampusHub University', major='Undergraduate', bio=None, skills=None, joined_date='2026', **kwargs):
+    def __init__(self, username=None, password_hash=None, role='student', name=None, email=None, avatar=None, institution='', major='', bio='', skills=None, joined_date='2026', **kwargs):
         super().__init__(**kwargs)
         if username is not None: self.username = username
         if password_hash is not None: self.password_hash = password_hash
@@ -74,17 +74,29 @@ class User(db.Model):
         self.skills_json = json.dumps(val if isinstance(val, list) else [])
 
     def to_dict(self, include_private=False):
+        # Compute initials
+        name_or_u = (self.name or self.username or '').strip()
+        parts = [p for p in name_or_u.split() if p]
+        if len(parts) >= 2:
+            calc_avatar = (parts[0][0] + parts[1][0]).upper()
+        elif len(name_or_u) == 1:
+            calc_avatar = name_or_u.upper()
+        elif len(name_or_u) >= 2:
+            calc_avatar = name_or_u[:2].upper()
+        else:
+            calc_avatar = 'NA'
+
         data = {
             'id': self.id,
             'username': self.username,
             'role': self.role,
             'name': self.name or self.username,
             'email': self.email or '',
-            'avatar': self.avatar or (self.name or self.username)[:2].upper(),
-            'institution': self.institution or 'CampusHub University',
-            'major': self.major or 'Undergraduate',
+            'avatar': self.avatar or calc_avatar,
+            'institution': self.institution or '',
+            'major': self.major or '',
             'bio': self.bio or '',
-            'skills': self.skills,
+            'skills': self.skills or [],
             'joined': self.joined_date,
             'createdAt': self.created_at.isoformat() if self.created_at else None
         }

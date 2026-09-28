@@ -35,19 +35,19 @@ export const api = {
   login: (username, password) => request('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ username, password })
-  }),
+  }, { allowOfflineQueue: false }),
   register: (payload) => request('/auth/register', {
     method: 'POST',
     body: JSON.stringify(payload)
-  }),
+  }, { allowOfflineQueue: false }),
   forgotPassword: (identifier) => request('/auth/forgot-password', {
     method: 'POST',
     body: JSON.stringify({ identifier })
-  }),
+  }, { allowOfflineQueue: false }),
   resetPassword: (payload) => request('/auth/reset-password', {
     method: 'POST',
     body: JSON.stringify(payload)
-  }),
+  }, { allowOfflineQueue: false }),
   getMe: () => request('/auth/me'),
   updateProfile: (profile) => request('/auth/profile', {
     method: 'PUT',

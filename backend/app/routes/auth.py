@@ -3,13 +3,16 @@ from flask import Blueprint, request, jsonify
 try:
     from ..models import db, User
     from ..utils.auth_helpers import generate_token, jwt_required, admin_required
+    from ..utils.email_service import generate_otp, store_otp, verify_and_consume_otp, send_resend_email
 except (ImportError, ValueError):
     try:
         from app.models import db, User
         from app.utils.auth_helpers import generate_token, jwt_required, admin_required
+        from app.utils.email_service import generate_otp, store_otp, verify_and_consume_otp, send_resend_email
     except (ImportError, ValueError):
         from backend.app.models import db, User
         from backend.app.utils.auth_helpers import generate_token, jwt_required, admin_required
+        from backend.app.utils.email_service import generate_otp, store_otp, verify_and_consume_otp, send_resend_email
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
@@ -51,10 +54,23 @@ def register():
         role = str(data.get('role', 'student')).strip()
         name = str(data.get('name', username)).strip()
         email = str(data.get('email', f"{username}@campushub.edu")).strip()
-        institution = str(data.get('institution', 'CampusHub University')).strip()
-        major = str(data.get('major', 'Undergraduate')).strip()
+        institution = str(data.get('institution', '')).strip()
+        major = str(data.get('major', '')).strip()
         bio = str(data.get('bio', '')).strip()
-        avatar = data.get('avatar') or (name or username)[:2].upper()
+
+        # Compute avatar initials
+        name_or_u = (name or username).strip()
+        parts = [p for p in name_or_u.split() if p]
+        if len(parts) >= 2:
+            calc_avatar = (parts[0][0] + parts[1][0]).upper()
+        elif len(name_or_u) == 1:
+            calc_avatar = name_or_u.upper()
+        elif len(name_or_u) >= 2:
+            calc_avatar = name_or_u[:2].upper()
+        else:
+            calc_avatar = 'NA'
+
+        avatar = data.get('avatar') or calc_avatar
 
         if not username or not password:
             return jsonify({'success': False, 'message': 'Username and password are required'}), 400
@@ -76,8 +92,8 @@ def register():
             avatar=avatar
         )
         user.set_password(password)
-        skills = data.get('skills', ['Campus Member', 'Collaboration'])
-        user.skills = skills if isinstance(skills, list) else [skills]
+        skills = data.get('skills', [])
+        user.skills = skills if isinstance(skills, list) else []
 
         db.session.add(user)
         db.session.commit()
@@ -98,25 +114,41 @@ def register():
 def forgot_password():
     try:
         data = request.get_json() or {}
-        identifier = str(data.get('identifier', data.get('username', data.get('email', '')))).strip().lower()
+        identifier = str(data.get('identifier', data.get('username', data.get('email', '')))).strip()
         
         if not identifier:
             return jsonify({'success': False, 'message': 'Please provide your username or email address'}), 400
         
         user = User.query.filter(
-            (User.username == identifier) | (User.email == identifier)
+            (User.username.ilike(identifier)) | 
+            (User.email.ilike(identifier)) |
+            (User.name.ilike(identifier))
         ).first()
         
         if not user:
             return jsonify({'success': False, 'message': 'User does not exist. Please check your username or register a new account.'}), 404
         
-        return jsonify({
+        # 1. Generate 6-digit OTP code and store with 10-min expiration
+        otp_code = generate_otp()
+        user_email = user.email or f"{user.username}@campushub.edu"
+        store_otp(user.username, user_email, otp_code)
+
+        # 2. Dispatch email via Resend API
+        email_result = send_resend_email(user_email, user.name or user.username, otp_code)
+
+        resp_payload = {
             'success': True,
-            'message': f'Verification code sent to {user.email}',
+            'message': f'6-digit verification code sent to {user_email}',
             'username': user.username,
-            'email': user.email,
-            'verificationRequired': True
-        }), 200
+            'email': user_email,
+            'verificationRequired': True,
+            'emailSent': email_result.get('sent', False)
+        }
+        # In simulation mode (e.g., when testing in local dev without RESEND_API_KEY), attach code for convenience
+        if email_result.get('simulated'):
+            resp_payload['simulatedCode'] = otp_code
+
+        return jsonify(resp_payload), 200
     except Exception as e:
         return jsonify({'success': False, 'message': f'Forgot password error: {str(e)}'}), 500
 
@@ -125,8 +157,9 @@ def forgot_password():
 def reset_password():
     try:
         data = request.get_json() or {}
-        identifier = str(data.get('identifier', data.get('username', data.get('email', '')))).strip().lower()
+        identifier = str(data.get('identifier', data.get('username', data.get('email', '')))).strip()
         new_password = str(data.get('newPassword', data.get('password', ''))).strip()
+        reset_code = str(data.get('resetCode', data.get('code', ''))).strip()
         
         if not identifier or not new_password:
             return jsonify({'success': False, 'message': 'Username and new password are required'}), 400
@@ -135,11 +168,27 @@ def reset_password():
             return jsonify({'success': False, 'message': 'Password must be at least 8 characters'}), 400
             
         user = User.query.filter(
-            (User.username == identifier) | (User.email == identifier)
+            (User.username.ilike(identifier)) | 
+            (User.email.ilike(identifier)) |
+            (User.name.ilike(identifier))
         ).first()
         
         if not user:
             return jsonify({'success': False, 'message': 'User does not exist'}), 404
+
+        if not reset_code:
+            return jsonify({'success': False, 'message': 'Please enter the 6-digit verification code sent to your email'}), 400
+
+        # Strict OTP verification
+        valid, verify_msg = verify_and_consume_otp(identifier, reset_code)
+        if not valid:
+            valid_user, verify_msg_user = verify_and_consume_otp(user.username, reset_code)
+            if not valid_user and user.email:
+                valid_email, verify_msg_email = verify_and_consume_otp(user.email, reset_code)
+                if not valid_email:
+                    return jsonify({'success': False, 'message': verify_msg}), 400
+            elif not valid_user:
+                return jsonify({'success': False, 'message': verify_msg}), 400
             
         user.set_password(new_password)
         db.session.commit()
@@ -309,8 +358,9 @@ def admin_create_user(current_user):
             role=role,
             name=str(data.get('name', username)).strip(),
             email=str(data.get('email', f'{username}@campushub.edu')).strip(),
-            institution=str(data.get('institution', 'CampusHub University')).strip(),
-            major=str(data.get('major', 'Undergraduate')).strip()
+            institution=str(data.get('institution', '')).strip(),
+            major=str(data.get('major', '')).strip(),
+            bio=str(data.get('bio', '')).strip()
         )
         user.set_password(password)
         db.session.add(user)

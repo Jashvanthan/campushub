@@ -166,8 +166,16 @@ class NetworkManager {
         const response = await fetch(url, options);
         if (response.ok || response.status < 500) {
           // 2xx, 3xx, 4xx (client errors are not retried)
-          const data = await response.json();
-          return data;
+          const contentType = response.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            return await response.json();
+          }
+          const text = await response.text();
+          try {
+            return JSON.parse(text);
+          } catch (_) {
+            return { success: response.ok, message: text, status: response.status };
+          }
         }
         // 5xx Server Error - retry
         throw new Error(`Server returned HTTP ${response.status}`);
