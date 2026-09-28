@@ -1,5 +1,25 @@
 @import "https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap";
 
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  position: relative;
+  -webkit-text-size-adjust: 100%;
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 /* ─── CSS Variables ─── */
 :root {
   --bg-primary: #0f1219;
@@ -979,7 +999,22 @@ select.form-control optgroup {
   box-shadow: 0 2px 10px rgba(239, 68, 68, 0.25) !important;
   transform: scale(1.1);
 }
-.mobile-menu-btn { display: none; color: var(--text-primary); z-index: 1205; }
+.mobile-menu-btn {
+  display: none;
+  color: var(--text-primary);
+  z-index: 1205;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.4rem;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
 
 .mobile-menu-overlay {
   position: fixed;
@@ -3784,16 +3819,30 @@ select.form-control optgroup {
 
   /* Navbar & Mobile Navigation Drawer */
   .navbar {
-    padding: 0.75rem 1.25rem;
+    padding: 0.6rem 1rem !important;
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
     right: 0 !important;
     width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
     z-index: 1100 !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+  .nav-brand {
+    font-size: 1.25rem !important;
+    gap: 0.4rem !important;
+    flex-shrink: 0 !important;
   }
   .mobile-menu-btn {
     display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-left: auto !important;
+    flex-shrink: 0 !important;
     z-index: 1205 !important;
   }
   .nav-content {
