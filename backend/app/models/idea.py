@@ -121,6 +121,11 @@ class IdeaSupport(db.Model):
         db.UniqueConstraint('idea_id', 'username', name='unique_idea_support_per_user'),
     )
 
+    def __init__(self, **kwargs):
+        super().__init__()
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
 
 class IdeaFollower(db.Model):
     __tablename__ = 'idea_followers'
@@ -133,6 +138,11 @@ class IdeaFollower(db.Model):
     __table_args__ = (
         db.UniqueConstraint('idea_id', 'username', name='unique_idea_follower_per_user'),
     )
+
+    def __init__(self, **kwargs):
+        super().__init__()
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
 
 class ContributionRequest(db.Model):
@@ -151,6 +161,11 @@ class ContributionRequest(db.Model):
     status = db.Column(db.String(30), default='PENDING', index=True) # PENDING, ACCEPTED, REJECTED
     requested_at = db.Column(db.DateTime, default=datetime.utcnow)
     responded_at = db.Column(db.DateTime, nullable=True)
+
+    def __init__(self, **kwargs):
+        super().__init__()
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     @property
     def skills(self):

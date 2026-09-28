@@ -132,6 +132,11 @@ class PostLike(db.Model):
         db.UniqueConstraint('post_id', 'username', name='unique_post_like_per_user'),
     )
 
+    def __init__(self, **kwargs):
+        super().__init__()
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
 
 class PostComment(db.Model):
     __tablename__ = 'post_comments'
@@ -143,6 +148,11 @@ class PostComment(db.Model):
     author_avatar = db.Column(db.Text, nullable=True)
     text = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __init__(self, **kwargs):
+        super().__init__()
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     def to_dict(self):
         return {
@@ -167,6 +177,11 @@ class EventRegistration(db.Model):
     members_json = db.Column(db.Text, nullable=True, default='[]')
     email = db.Column(db.String(120), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __init__(self, **kwargs):
+        super().__init__()
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     @property
     def members(self):

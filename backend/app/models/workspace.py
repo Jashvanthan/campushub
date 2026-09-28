@@ -93,6 +93,11 @@ class WorkspaceMember(db.Model):
         db.UniqueConstraint('workspace_id', 'user_id', name='unique_workspace_member'),
     )
 
+    def __init__(self, **kwargs):
+        super().__init__()
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
     def to_dict(self):
         return {
             'userId': self.user_id,
@@ -123,6 +128,11 @@ class Task(db.Model):
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __init__(self, **kwargs):
+        super().__init__()
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     @property
     def tags(self):
@@ -164,6 +174,11 @@ class Milestone(db.Model):
     deliverables_json = db.Column(db.Text, nullable=True, default='[]')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    def __init__(self, **kwargs):
+        super().__init__()
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
     @property
     def deliverables(self):
         try: return json.loads(self.deliverables_json) if self.deliverables_json else []
@@ -203,6 +218,11 @@ class Discussion(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     replies = db.relationship('DiscussionReply', backref='discussion', cascade='all, delete-orphan', lazy='dynamic', order_by='DiscussionReply.created_at.asc()')
 
+    def __init__(self, **kwargs):
+        super().__init__()
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -229,6 +249,11 @@ class DiscussionReply(db.Model):
     text = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    def __init__(self, **kwargs):
+        super().__init__()
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -252,6 +277,11 @@ class WorkspaceFile(db.Model):
     uploader_id = db.Column(db.String(80), nullable=False)
     uploader_name = db.Column(db.String(120), nullable=True)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __init__(self, **kwargs):
+        super().__init__()
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     def to_dict(self):
         return {
@@ -324,6 +354,11 @@ class ChatMessage(db.Model):
     code_snippet_json = db.Column(db.Text, nullable=True)
     is_system = db.Column(db.Boolean, default=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    def __init__(self, **kwargs):
+        super().__init__()
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     @property
     def reactions(self):
