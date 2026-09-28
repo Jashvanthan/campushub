@@ -9,8 +9,11 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 def get_database_url():
     url = os.environ.get('DATABASE_URL')
     if not url:
-        # Default to local SQLite database in instance folder
-        return f"sqlite:///{os.path.join(BASE_DIR, '..', 'campushub.db')}"
+        db_path = os.path.abspath(os.path.join(BASE_DIR, '..', 'campushub.db'))
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        # Ensure forward slashes for SQLite URI cross-platform compatibility
+        normalized_path = db_path.replace('\\', '/')
+        return f"sqlite:///{normalized_path}"
     # Render / Heroku Postgres URL fix for SQLAlchemy 2.0+
     if url.startswith('postgres://'):
         url = url.replace('postgres://', 'postgresql://', 1)

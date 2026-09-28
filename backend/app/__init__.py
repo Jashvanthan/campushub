@@ -66,12 +66,16 @@ def create_app(config_name=None):
     def internal_error(e):
         return jsonify({'success': False, 'message': 'Internal server error'}), 500
 
-    # Auto-create tables and seed database on initial boot
+    # Auto-create tables and seed database on initial boot safely
     with app.app_context():
-        db.create_all()
         try:
+            db.create_all()
             seed_database()
         except Exception as e:
-            app.logger.warning(f"Seed database warning: {e}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            app.logger.warning(f"Database initialization warning: {e}")
 
     return app
