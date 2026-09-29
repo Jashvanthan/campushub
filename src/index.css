@@ -11707,6 +11707,26 @@ select.form-control optgroup {
   opacity: 0.75;
 }
 
+/* ─── Shared Post Deep Link Highlight ─── */
+.post-card.post-highlight-pulse {
+  animation: postPulseGlow 1.2s ease-in-out 3;
+  border-color: var(--accent-primary, #6366f1) !important;
+  box-shadow: 0 0 25px rgba(99, 102, 241, 0.45) !important;
+  position: relative;
+  z-index: 5;
+}
+
+@keyframes postPulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(99, 102, 241, 0.6);
+    transform: scale(1.015);
+  }
+}
+
 
 
 

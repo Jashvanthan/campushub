@@ -662,15 +662,27 @@ export default function App() {
   }, [session]);
 
   // Deep-linking URL routing & browser back/forward navigation
+  const [highlightPostId, setHighlightPostId] = useState(null);
+
   useEffect(() => {
     const parseUrlRoute = () => {
       const pathname = (window.location.pathname || '').toLowerCase();
       const params = new URLSearchParams(window.location.search);
       const qParam = params.get('q') || '';
+      const postParam = params.get('post') || '';
 
       if (pathname === '/search' || pathname.startsWith('/search')) {
         setActiveTab('search');
         if (qParam) setSearchQuery(qParam);
+      } else if (pathname.startsWith('/post/')) {
+        const parts = pathname.split('/').filter(Boolean);
+        if (parts[1]) {
+          setHighlightPostId(parts[1]);
+        }
+        setActiveTab('all');
+      } else if (postParam) {
+        setHighlightPostId(postParam);
+        setActiveTab('all');
       } else if (pathname === '/projects') {
         setActiveTab('projects');
       } else if (pathname === '/events') {
@@ -703,6 +715,21 @@ export default function App() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  // Smooth scroll & highlight shared post if targeted in URL
+  useEffect(() => {
+    if (highlightPostId && !loading && posts && posts.length > 0) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`post-${highlightPostId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('post-highlight-pulse');
+          setTimeout(() => el.classList.remove('post-highlight-pulse'), 3500);
+        }
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightPostId, loading, posts]);
 
   const handleIntroComplete = useCallback(() => {
     sessionStorage.setItem('campushub_intro_played', 'true');
@@ -1334,15 +1361,30 @@ export default function App() {
   }
 
   async function handleShare(post) {
-    const data = { title:post.title, text:post.description||`Check out: ${post.title}`, url:window.location.href };
+    const postUrl = `${window.location.origin}/post/${post.id}`;
+    const data = { 
+      title: post.title, 
+      text: post.description ? `${post.title} — ${post.description.substring(0, 100)}...` : `Check out: ${post.title}`, 
+      url: postUrl 
+    };
+
     if (navigator.share) {
-      try { await navigator.share(data); } catch {}
+      try { 
+        await navigator.share(data); 
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          try {
+            await navigator.clipboard.writeText(postUrl);
+            showAlert('Post link copied to clipboard!', 'Link Copied', 'success');
+          } catch (_) {}
+        }
+      }
     } else {
       try {
-        await navigator.clipboard.writeText(`${data.title}\n${data.text}\n${data.url}`);
+        await navigator.clipboard.writeText(postUrl);
         showAlert('Post link copied to your clipboard!', 'Link Copied', 'success');
       } catch {
-        showAlert('Direct sharing is not supported on this device.', 'Notice', 'info');
+        showAlert(`Post URL: ${postUrl}`, 'Share Link', 'info');
       }
     }
   }
