@@ -579,7 +579,7 @@ function PostCard({
         <div className="comments-section">
           <div className="comment-input-wrapper">
             <div className="post-avatar" style={{ width:'32px', height:'32px', fontSize:'0.8rem' }}>
-              {user?.username?.slice(0,1).toUpperCase()}
+              {renderAvatarContent(user?.avatar, user?.name, user?.username, (user?.username || 'U').slice(0, 2).toUpperCase())}
             </div>
             <form onSubmit={e => onCommentSubmit(e, post.id)} className="comment-form">
               <input type="text" className="comment-input" placeholder="Write a comment..." value={commentText}
@@ -588,37 +588,45 @@ function PostCard({
             </form>
           </div>
           <div className="comment-list">
-            {post.comments.map(c => (
-              <div key={c.id} className="comment">
-                <div 
-                  className="post-avatar" 
-                  style={{ width:'30px', height:'30px', fontSize:'0.75rem', cursor: 'pointer' }}
-                  onClick={() => onOpenUserProfile && onOpenUserProfile(c.author)}
-                  title={`View ${c.author}'s Profile`}
-                >
-                  {c.author.slice(0,1).toUpperCase()}
-                </div>
-                <div className="comment-content">
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                    <div 
-                      className="comment-author" 
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => onOpenUserProfile && onOpenUserProfile(c.author)}
-                      title={`View ${c.author}'s Profile`}
-                    >
-                      {c.author}
-                    </div>
-                    {(isAdmin || user?.username === c.author) && (
-                      <button className="icon-btn" style={{ padding:'2px', color:'var(--danger)', opacity:0.6 }}
-                        onClick={() => onDeleteComment(post.id, c.id)} title="Delete comment">
-                        <Trash2 size={14} />
-                      </button>
-                    )}
+            {(post.comments || []).map(c => {
+              const commentAuthorId = c.authorId || c.author;
+              const commentProfile = users?.[commentAuthorId] || (commentAuthorId === 'admin' ? users?.admin : (commentAuthorId === 'student1' || commentAuthorId === 'std1') ? (users?.student1 || users?.std1) : null);
+              const commentAuthorName = c.authorName || commentProfile?.name || c.author || 'Member';
+              const commentAvatar = c.avatar || commentProfile?.avatar;
+              const canDeleteThisComment = isAdmin || user?.username === c.author || user?.username === c.authorId || (user?.id && String(user?.id) === String(c.authorId));
+
+              return (
+                <div key={c.id} className="comment">
+                  <div 
+                    className="post-avatar" 
+                    style={{ width:'30px', height:'30px', fontSize:'0.75rem', cursor: 'pointer' }}
+                    onClick={() => onOpenUserProfile && onOpenUserProfile(commentAuthorId, { name: commentAuthorName, avatar: commentAvatar })}
+                    title={`View ${commentAuthorName}'s Profile`}
+                  >
+                    {renderAvatarContent(commentAvatar, commentAuthorName, commentAuthorId, commentAuthorName.slice(0, 2).toUpperCase())}
                   </div>
-                  <div className="comment-text">{c.text}</div>
+                  <div className="comment-content">
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                      <div 
+                        className="comment-author" 
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => onOpenUserProfile && onOpenUserProfile(commentAuthorId, { name: commentAuthorName, avatar: commentAvatar })}
+                        title={`View ${commentAuthorName}'s Profile`}
+                      >
+                        {commentAuthorName}
+                      </div>
+                      {canDeleteThisComment && (
+                        <button className="icon-btn" style={{ padding:'2px', color:'var(--danger)', opacity:0.7 }}
+                          onClick={() => onDeleteComment(post.id, c.id)} title="Delete comment">
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                    <div className="comment-text">{c.text}</div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -1399,28 +1407,60 @@ export default function App() {
     const text = commentText.trim();
     if (!text) return;
 
-    const targetPost = (posts || []).find(p => p.id === postId);
-    const authorId = targetPost?.authorId || targetPost?.author;
+    const targetPost = (posts || []).find(p => p.id === postId || String(p.id) === String(postId));
+    const authorId = targetPost?.authorId || targetPost?.author?.name || targetPost?.author;
 
-    setPosts(prev => prev.map(p =>
-      p.id === postId ? { ...p, comments:[...p.comments,{ id:Date.now(), author:session.username, text }] } : p
-    ));
+    const newComment = {
+      id: Date.now(),
+      author: session?.name || session?.username || 'Member',
+      authorId: session?.username || 'member',
+      role: session?.role || 'student',
+      avatar: session?.avatar || (session?.username ? session.username.slice(0, 2).toUpperCase() : 'ME'),
+      text,
+      createdAt: new Date().toISOString()
+    };
 
-    if (authorId && authorId !== session.username && targetPost) {
+    setPosts(prev => {
+      const next = (prev || []).map(p => {
+        if (p.id !== postId && String(p.id) !== String(postId)) return p;
+        const currentComments = Array.isArray(p.comments) ? p.comments : [];
+        return { ...p, comments: [...currentComments, newComment] };
+      });
+      broadcast('SYNC_POSTS', next);
+      storageManager.setItem('campushub_posts', next);
+      return next;
+    });
+
+    if (authorId && authorId !== session?.username && targetPost) {
       addNotification({
         recipientId: authorId,
-        senderId: session.username,
-        senderName: session.name || session.username,
-        senderAvatar: session.avatar || session.username.slice(0, 2).toUpperCase(),
+        senderId: session?.username || 'user',
+        senderName: session?.name || session?.username || 'Member',
+        senderAvatar: session?.avatar || (session?.username || 'ME').slice(0, 2).toUpperCase(),
         type: 'post_comment',
         title: 'New comment on your post',
-        message: `${session.name || session.username} commented: "${text.substring(0, 60)}"`,
+        message: `${session?.name || session?.username} commented: "${text.substring(0, 60)}"`,
         targetTab: 'all',
         targetId: String(postId)
       });
     }
 
-    try { api.addComment(postId, text).catch(() => {}); } catch(e) {}
+    try { 
+      api.addComment(postId, text).then(res => {
+        if (res && res.success && res.comment) {
+          setPosts(prev => {
+            const synced = (prev || []).map(p => {
+              if (p.id !== postId && String(p.id) !== String(postId)) return p;
+              const currentComments = Array.isArray(p.comments) ? p.comments : [];
+              const updatedComments = currentComments.map(c => c.id === newComment.id ? res.comment : c);
+              return { ...p, comments: updatedComments };
+            });
+            storageManager.setItem('campushub_posts', synced);
+            return synced;
+          });
+        }
+      }).catch(() => {}); 
+    } catch(e) {}
     setCommentText('');
   }
 
@@ -1431,8 +1471,12 @@ export default function App() {
     });
     if (!confirmed) return;
     setPosts(prev => {
-      const next = prev.map(p => p.id===postId ? { ...p, comments:p.comments.filter(c=>c.id!==commentId) } : p);
+      const next = (prev || []).map(p => {
+        if (p.id !== postId && String(p.id) !== String(postId)) return p;
+        return { ...p, comments: (p.comments || []).filter(c => c.id !== commentId && String(c.id) !== String(commentId)) };
+      });
       broadcast('SYNC_POSTS', next);
+      storageManager.setItem('campushub_posts', next);
       return next;
     });
     try { api.deleteComment(postId, commentId).catch(() => {}); } catch(e) {}

@@ -11782,3 +11782,166 @@ select.form-control optgroup {
   }
 }
 
+/* ─────────────────────────────────────────────────
+   Enhanced Default User Avatar & Initial Fallback Styles
+   (Light & Dark Mode)
+───────────────────────────────────────────────── */
+.post-avatar,
+.idea-avatar,
+.feed-create-avatar,
+.user-avatar,
+.user-profile-avatar,
+.avatar-badge,
+.avatar-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 700;
+  text-transform: uppercase;
+  user-select: none;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* Light mode unsetted profile photo / default avatar colors */
+[data-theme="light"] .post-avatar,
+[data-theme="light"] .idea-avatar,
+[data-theme="light"] .feed-create-avatar,
+[data-theme="light"] .avatar-badge,
+[data-theme="light"] .avatar-placeholder {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+  color: #ffffff !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.22) !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="light"] .comment .post-avatar {
+  background: linear-gradient(135deg, #e0e7ff 0%, #ede9fe 100%) !important;
+  color: #4338ca !important;
+  border: 1.5px solid rgba(99, 102, 241, 0.3) !important;
+  box-shadow: 0 1px 4px rgba(99, 102, 241, 0.1) !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="light"] .user-profile-avatar {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+  color: #ffffff !important;
+  border: 4px solid #ffffff !important;
+  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.25) !important;
+}
+
+[data-theme="light"] .user-profile-avatar-initials {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+}
+
+/* ─────────────────────────────────────────────────
+   Workspace Responsive & Mobile Filtering Styles
+───────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .workspace-header-top {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 1rem !important;
+  }
+
+  .workspace-header-info-group {
+    width: 100% !important;
+  }
+
+  .workspace-title-row {
+    flex-wrap: wrap !important;
+    width: 100% !important;
+  }
+
+  .workspace-selector-dropdown,
+  .workspace-select-box {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .workspace-header-actions-group {
+    width: 100% !important;
+    justify-content: space-between !important;
+    flex-wrap: wrap !important;
+  }
+
+  .workspace-header-actions-group button {
+    flex: 1 !important;
+    justify-content: center !important;
+    min-width: 130px !important;
+  }
+
+  /* Workspace Nav Tabs - Horizontal Scroll on Mobile */
+  .workspace-tabs-nav {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: 0.5rem !important;
+    gap: 0.5rem !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  .workspace-tabs-nav::-webkit-scrollbar {
+    display: none !important;
+  }
+  .workspace-tab-btn {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    padding: 0.5rem 0.85rem !important;
+    font-size: 0.85rem !important;
+  }
+
+  /* Tasks Filter Toolbar & Selectors on Mobile */
+  .tasks-toolbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.85rem !important;
+    padding: 0.85rem 1rem !important;
+  }
+
+  .tasks-filters-group {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    gap: 0.65rem !important;
+  }
+
+  .task-filter-box {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 0.25rem 0.75rem !important;
+  }
+
+  .task-filter-select {
+    flex: 1 !important;
+    width: 100% !important;
+    padding-right: 1.8rem !important;
+  }
+
+  .task-clear-filter-btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .tasks-count-pill {
+    align-self: flex-start !important;
+  }
+
+  .tasks-toolbar .primary-btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Kanban Stacked Columns on Mobile */
+  .kanban-board-grid.stacked-columns .kanban-cards-list {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
