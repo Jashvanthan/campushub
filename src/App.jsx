@@ -654,9 +654,10 @@ export default function App() {
 
   // UI state
   const [showIntro, setShowIntro] = useState(() => {
-    const pathname = window.location.pathname || '';
-    const search = window.location.search || '';
-    if (pathname.startsWith('/post/') || pathname.startsWith('/search') || search.includes('post=')) {
+    const rawPath = typeof window !== 'undefined' ? (window.location.pathname || '') : '';
+    const search = typeof window !== 'undefined' ? (window.location.search || '') : '';
+    const hash = typeof window !== 'undefined' ? (window.location.hash || '') : '';
+    if (rawPath.toLowerCase().includes('/post') || search.toLowerCase().includes('post') || hash.toLowerCase().includes('post') || search.includes('pdata')) {
       sessionStorage.setItem('campushub_intro_played', 'true');
       return false;
     }
@@ -717,51 +718,63 @@ export default function App() {
     }
   }, [session]);
 
+  // Universal helper to extract target post ID from pathname, hash, or query params
+  const extractPostIdFromUrl = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+    const rawPathname = window.location.pathname || '';
+    const lowerPath = rawPathname.toLowerCase();
+    const search = window.location.search || '';
+    const hash = window.location.hash || '';
+    const params = new URLSearchParams(search);
+
+    // 1. Pathname: /post/:id or /posts/:id or /post/:id/
+    if (lowerPath.includes('/post/') || lowerPath.startsWith('/post')) {
+      const match = rawPathname.match(/\/posts?\/([^/?#]+)/i);
+      if (match && match[1]) return match[1];
+    }
+    // 2. Hash routing: #/post/:id or #/posts/:id
+    if (hash.toLowerCase().includes('/post/') || hash.toLowerCase().startsWith('#/post')) {
+      const match = hash.match(/\/posts?\/([^/?#]+)/i);
+      if (match && match[1]) return match[1];
+    }
+    // 3. Query param: ?post=:id
+    if (params.get('post')) return params.get('post');
+    return null;
+  }, []);
+
   // Deep-linking URL routing & browser back/forward navigation
   const [highlightPostId, setHighlightPostId] = useState(() => {
-    const rawPathname = typeof window !== 'undefined' ? window.location.pathname : '';
-    const lowerPath = rawPathname.toLowerCase();
-    const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
-    if (lowerPath.startsWith('/post/')) {
-      const parts = rawPathname.split('/').filter(Boolean);
-      return parts[1] || null;
-    }
-    return params.get('post') || null;
+    return extractPostIdFromUrl ? extractPostIdFromUrl() : null;
   });
 
   useEffect(() => {
     const parseUrlRoute = () => {
       const rawPathname = window.location.pathname || '';
       const lowerPath = rawPathname.toLowerCase();
+      const hash = (window.location.hash || '').toLowerCase();
       const params = new URLSearchParams(window.location.search);
       const qParam = params.get('q') || '';
-      const postParam = params.get('post') || '';
+      const postId = extractPostIdFromUrl();
 
-      if (lowerPath === '/search' || lowerPath.startsWith('/search')) {
+      if (postId) {
+        setHighlightPostId(postId);
+        setActiveTab('all');
+      } else if (lowerPath === '/search' || lowerPath.startsWith('/search') || hash.includes('search')) {
         setActiveTab('search');
         if (qParam) setSearchQuery(qParam);
-      } else if (lowerPath.startsWith('/post/')) {
-        const parts = rawPathname.split('/').filter(Boolean);
-        if (parts[1]) {
-          setHighlightPostId(parts[1]);
-        }
-        setActiveTab('all');
-      } else if (postParam) {
-        setHighlightPostId(postParam);
-        setActiveTab('all');
-      } else if (lowerPath === '/projects') {
+      } else if (lowerPath === '/projects' || hash.includes('projects')) {
         setActiveTab('projects');
-      } else if (lowerPath === '/events') {
+      } else if (lowerPath === '/events' || hash.includes('events')) {
         setActiveTab('events');
-      } else if (lowerPath === '/ideas') {
+      } else if (lowerPath === '/ideas' || hash.includes('ideas')) {
         setActiveTab('ideas');
-      } else if (lowerPath === '/workspaces') {
+      } else if (lowerPath === '/workspaces' || hash.includes('workspaces')) {
         setActiveTab('workspaces');
-      } else if (lowerPath === '/issues') {
+      } else if (lowerPath === '/issues' || hash.includes('issues')) {
         setActiveTab('issues');
-      } else if (lowerPath === '/admin') {
+      } else if (lowerPath === '/admin' || hash.includes('admin')) {
         setActiveTab('admin');
-      } else if (lowerPath.startsWith('/profile')) {
+      } else if (lowerPath.startsWith('/profile') || hash.includes('profile')) {
         const parts = rawPathname.split('/').filter(Boolean);
         if (parts[1]) {
           setSelectedProfileUser({ userKey: parts[1] });
@@ -780,16 +793,18 @@ export default function App() {
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, [extractPostIdFromUrl]);
 
   // Smooth scroll, fetch & open shared post modal when targeted in URL
   useEffect(() => {
     const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
     const pdata = searchParams.get('pdata');
-    if (!highlightPostId && !pdata) return;
+    const targetPostId = highlightPostId || extractPostIdFromUrl();
+
+    if (!targetPostId && !pdata) return;
 
     let isMounted = true;
-    const targetIdStr = highlightPostId ? String(highlightPostId) : '';
+    const targetIdStr = targetPostId ? String(targetPostId) : '';
 
     const showPost = (p) => {
       if (!p || !isMounted) return;
@@ -867,7 +882,7 @@ export default function App() {
     }).catch(() => {});
 
     return () => { isMounted = false; };
-  }, [highlightPostId, posts, ideas]);
+  }, [highlightPostId, posts, ideas, extractPostIdFromUrl]);
 
   const handleIntroComplete = useCallback(() => {
     sessionStorage.setItem('campushub_intro_played', 'true');
@@ -931,9 +946,10 @@ export default function App() {
         if (savedSession) {
           setSession(savedSession);
         } else {
-          const pathname = window.location.pathname || '';
-          const search = window.location.search || '';
-          if (pathname.startsWith('/post/') || pathname.startsWith('/search') || search.includes('post=')) {
+          const rawPath = typeof window !== 'undefined' ? (window.location.pathname || '') : '';
+          const search = typeof window !== 'undefined' ? (window.location.search || '') : '';
+          const hash = typeof window !== 'undefined' ? (window.location.hash || '') : '';
+          if (rawPath.toLowerCase().includes('/post') || search.toLowerCase().includes('post') || hash.toLowerCase().includes('post') || search.includes('pdata') || rawPath.toLowerCase().startsWith('/search') || hash.includes('search')) {
             const guestSession = { username: 'guest', role: 'guest', name: 'Campus Guest', avatar: 'GU' };
             setSession(guestSession);
           }
