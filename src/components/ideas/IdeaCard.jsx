@@ -160,26 +160,16 @@ export default function IdeaCard({
           <span className="metric-text-label">Support</span>
         </button>
 
-        <button
-          className={`idea-metric-btn ${isFollowed ? 'active-followed' : ''}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleFollow(idea.id);
-          }}
-          title={isFollowed ? 'Following updates' : 'Follow idea'}
-        >
-          <Bell size={15} />
-          <span>{isFollowed ? 'Following' : 'Follow'}</span>
-        </button>
-
         <div className="idea-metric-item" title="Discussion threads">
           <MessageSquare size={15} />
-          <span>{idea.discussionCount || 12}</span>
+          <span>{activeWorkspace?.discussions?.length || idea.discussionCount || 0}</span>
+          <span className="metric-text-label">Discussions</span>
         </div>
 
-        <div className="idea-metric-item" title="Active contributors">
+        <div className="idea-metric-item" title="Team members">
           <Users size={15} />
-          <span>{idea.contributorCount || 8}</span>
+          <span>{activeWorkspace?.members?.length || activeWorkspace?.membersCount || (idea.contributors || []).length || 1}</span>
+          <span className="metric-text-label">Members</span>
         </div>
       </div>
 
