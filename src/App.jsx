@@ -607,7 +607,15 @@ export default function App() {
   const [theme, setTheme]           = useState(() => localStorage.getItem('campushub_theme') || 'dark');
 
   // UI state
-  const [showIntro, setShowIntro]   = useState(() => sessionStorage.getItem('campushub_intro_played') !== 'true');
+  const [showIntro, setShowIntro] = useState(() => {
+    const pathname = window.location.pathname || '';
+    const search = window.location.search || '';
+    if (pathname.startsWith('/post/') || pathname.startsWith('/search') || search.includes('post=')) {
+      sessionStorage.setItem('campushub_intro_played', 'true');
+      return false;
+    }
+    return sessionStorage.getItem('campushub_intro_played') !== 'true';
+  });
   const [activeTab, setActiveTab]   = useState('all');
   const [showNewPost, setShowNewPost] = useState(false);
   const [editingPost, setEditingPost] = useState(null);
@@ -639,6 +647,7 @@ export default function App() {
   const [manageRequestsPost, setManageRequestsPost] = useState(null);
   const [viewingUserProfile, setViewingUserProfile] = useState(null);
   const [selectedProfileUser, setSelectedProfileUser] = useState(null);
+  const [viewingSharedPost, setViewingSharedPost] = useState(null);
 
   const handleOpenUserProfile = useCallback((userKey, authorFallback = null) => {
     setSelectedProfileUser({ userKey, authorFallback });
@@ -805,7 +814,16 @@ export default function App() {
         }
 
         const savedSession = await storageManager.getItem('campushub_session');
-        if (savedSession) setSession(savedSession);
+        if (savedSession) {
+          setSession(savedSession);
+        } else {
+          const pathname = window.location.pathname || '';
+          const search = window.location.search || '';
+          if (pathname.startsWith('/post/') || pathname.startsWith('/search') || search.includes('post=')) {
+            const guestSession = { username: 'guest', role: 'guest', name: 'Campus Guest', avatar: 'GU' };
+            setSession(guestSession);
+          }
+        }
 
         // Load and sanitize Posts
         const savedPosts = isV5 ? await storageManager.getItem('campushub_posts') : null;
@@ -3997,6 +4015,106 @@ export default function App() {
             navTo('profile');
           }}
         />
+      )}
+
+      {/* Shared Post Direct View Modal */}
+      {viewingSharedPost && (
+        <ModalPortal>
+          <div className="modal-overlay" onClick={() => {
+            setViewingSharedPost(null);
+            if (window.location.pathname.startsWith('/post/')) {
+              try { window.history.pushState({ tab: 'all' }, '', '/'); } catch (_) {}
+            }
+          }}>
+            <div
+              className="glass-panel"
+              style={{
+                maxWidth: '680px',
+                width: '95%',
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                padding: '1.25rem',
+                borderRadius: '16px',
+                border: '1px solid var(--border-color)',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+                animation: 'scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both'
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.25rem 0.75rem', borderRadius: '20px', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(236, 72, 153, 0.2))', color: 'var(--accent-primary)', border: '1px solid rgba(99,102,241,0.35)' }}>
+                    ✨ Shared Post
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  onClick={() => {
+                    setViewingSharedPost(null);
+                    if (window.location.pathname.startsWith('/post/')) {
+                      try { window.history.pushState({ tab: 'all' }, '', '/'); } catch (_) {}
+                    }
+                  }}
+                  title="Close"
+                  style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <PostCard
+                post={viewingSharedPost}
+                user={session}
+                onLike={handleLike}
+                onDelete={(id) => {
+                  handleDeletePost(id);
+                  setViewingSharedPost(null);
+                }}
+                onEdit={(p) => {
+                  setEditingPost(p);
+                  setShowNewPost(true);
+                  setViewingSharedPost(null);
+                }}
+                onToggleComment={id => setOpenComment(p => p===id?null:id)}
+                commentOpen={openComment === viewingSharedPost.id}
+                commentText={commentText}
+                onCommentChange={setCommentText}
+                onCommentSubmit={handleCommentSubmit}
+                onDeleteComment={handleDeleteComment}
+                onShare={handleShare}
+                onToggleResolve={handleToggleResolve}
+                onClearIssue={(id) => {
+                  handleClearIssue(id);
+                  setViewingSharedPost(null);
+                }}
+                isAdmin={isAdmin}
+                isAuthenticated={isAuth}
+                contributionRequests={contributionRequests || []}
+                workspaces={workspaces || []}
+                ideas={ideas || []}
+                users={users || {}}
+                onNavigateToWorkspace={(wsId) => {
+                  setViewingSharedPost(null);
+                  setActiveWorkspaceId(wsId);
+                  navTo('workspaces');
+                }}
+                onJoinContribution={(p) => {
+                  setViewingSharedPost(null);
+                  setJoinModalPost(p);
+                }}
+                onManageRequests={(p) => {
+                  setViewingSharedPost(null);
+                  setManageRequestsPost(p);
+                }}
+                onOpenUserProfile={(userKey, author) => {
+                  setViewingSharedPost(null);
+                  handleOpenUserProfile(userKey, author);
+                }}
+              />
+            </div>
+          </div>
+        </ModalPortal>
       )}
 
       {/* Create / Edit Post Modal */}
