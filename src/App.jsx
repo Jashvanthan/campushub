@@ -716,19 +716,34 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Smooth scroll & highlight shared post if targeted in URL
+  // Smooth scroll, fetch & highlight shared post if targeted in URL
   useEffect(() => {
-    if (highlightPostId && !loading && posts && posts.length > 0) {
-      const timer = setTimeout(() => {
-        const el = document.getElementById(`post-${highlightPostId}`);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          el.classList.add('post-highlight-pulse');
-          setTimeout(() => el.classList.remove('post-highlight-pulse'), 3500);
+    if (!highlightPostId || loading) return;
+
+    let isMounted = true;
+    const scrollAndHighlight = () => {
+      const el = document.getElementById(`post-${highlightPostId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('post-highlight-pulse');
+        setTimeout(() => el.classList.remove('post-highlight-pulse'), 4000);
+      }
+    };
+
+    const existsLocally = (posts || []).some(p => String(p.id) === String(highlightPostId));
+    if (!existsLocally) {
+      api.getPost(highlightPostId).then(res => {
+        if (isMounted && res && res.success && res.post) {
+          setPosts(prev => [res.post, ...(prev || []).filter(p => String(p.id) !== String(res.post.id))]);
+          setTimeout(scrollAndHighlight, 300);
         }
-      }, 400);
+      }).catch(() => {});
+    } else {
+      const timer = setTimeout(scrollAndHighlight, 400);
       return () => clearTimeout(timer);
     }
+
+    return () => { isMounted = false; };
   }, [highlightPostId, loading, posts]);
 
   const handleIntroComplete = useCallback(() => {
