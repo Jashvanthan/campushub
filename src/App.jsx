@@ -22,6 +22,7 @@ import ManageRequestsModal from './components/ideas/ManageRequestsModal';
 import ModalPortal from './components/common/ModalPortal';
 import FormattedText from './components/common/FormattedText';
 import UserProfileModal, { DEFAULT_USER_PROFILES, getUserInitials } from './components/common/UserProfileModal';
+import SharePostModal from './components/posts/SharePostModal';
 import {
   SEED_IDEAS,
   SEED_WORKSPACES,
@@ -693,6 +694,7 @@ export default function App() {
   const [viewingUserProfile, setViewingUserProfile] = useState(null);
   const [selectedProfileUser, setSelectedProfileUser] = useState(null);
   const [viewingSharedPost, setViewingSharedPost] = useState(null);
+  const [sharingPost, setSharingPost] = useState(null);
 
   const handleOpenUserProfile = useCallback((userKey, authorFallback = null) => {
     setSelectedProfileUser({ userKey, authorFallback });
@@ -1507,33 +1509,15 @@ export default function App() {
 
   async function handleShare(post) {
     if (!post) return;
+    setSharingPost(post);
     const payload = encodePostShareData(post);
     const postUrl = `${window.location.origin}/post/${post.id}${payload ? `?pdata=${payload}` : ''}`;
-    const data = { 
-      title: post.title, 
-      text: post.description ? `${post.title} — ${post.description.substring(0, 100)}...` : `Check out: ${post.title}`, 
-      url: postUrl 
-    };
-
-    if (navigator.share) {
-      try { 
-        await navigator.share(data); 
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          try {
-            await navigator.clipboard.writeText(postUrl);
-            showAlert('Post link copied to clipboard!', 'Link Copied', 'success');
-          } catch (_) {}
-        }
-      }
-    } else {
-      try {
+    try {
+      if (navigator.clipboard) {
         await navigator.clipboard.writeText(postUrl);
-        showAlert('Post link copied to your clipboard!', 'Link Copied', 'success');
-      } catch {
-        showAlert(`Post URL: ${postUrl}`, 'Share Link', 'info');
+        setToast('✓ Post link copied to clipboard!');
       }
-    }
+    } catch (_) {}
   }
 
   /* ─────────────────────────────────────────────────
@@ -2821,6 +2805,15 @@ export default function App() {
       <NetworkConnectionLoader />
       <WarpSpeedCanvas isApp={!!session} />
       <VoidBackground isApp={!!session} />
+
+      {/* Share Post Modal Dialog */}
+      {sharingPost && (
+        <SharePostModal
+          post={sharingPost}
+          onClose={() => setSharingPost(null)}
+          onToast={(msg) => setToast(msg)}
+        />
+      )}
 
       {/* Shared Post Direct View Modal - Global overlay */}
       {viewingSharedPost && (
