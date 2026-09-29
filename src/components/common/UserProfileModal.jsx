@@ -212,19 +212,19 @@ export default function UserProfileModal({
           {/* High-Level Numerical Metric Stats Grid */}
           <div className="user-profile-stats-grid">
             <div className="user-profile-stat-card" onClick={() => setActiveTab('posts')}>
-              <div className="stat-num" style={{ color: '#818cf8' }}>{userPosts.length}</div>
+              <div className="stat-num stat-posts">{userPosts.length}</div>
               <div className="stat-label">Posts Published</div>
             </div>
             <div className="user-profile-stat-card" onClick={() => setActiveTab('contributions')}>
-              <div className="stat-num" style={{ color: '#fbbf24' }}>{userIdeas.length}</div>
+              <div className="stat-num stat-ideas">{userIdeas.length}</div>
               <div className="stat-label">Ideas &amp; Projects</div>
             </div>
             <div className="user-profile-stat-card" onClick={() => setActiveTab('contributions')}>
-              <div className="stat-num" style={{ color: '#34d399' }}>{userWorkspaces.length}</div>
+              <div className="stat-num stat-workspaces">{userWorkspaces.length}</div>
               <div className="stat-label">Workspaces Joined</div>
             </div>
             <div className="user-profile-stat-card">
-              <div className="stat-num" style={{ color: '#f43f5e' }}>{totalLikes}</div>
+              <div className="stat-num stat-likes">{totalLikes}</div>
               <div className="stat-label">Total Post Likes</div>
             </div>
           </div>

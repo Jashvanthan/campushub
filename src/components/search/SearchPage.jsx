@@ -247,34 +247,26 @@ export default function SearchPage({
 
         {/* Popular / Suggested Search Pills */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             Popular Topics:
           </span>
-          {quickSearchTags.map(tag => (
-            <button
-              key={tag}
-              type="button"
-              className="tag"
-              onClick={() => {
-                setQuery(tag);
-                setDebouncedQuery(tag);
-                if (onQueryChange) onQueryChange(tag);
-              }}
-              style={{
-                cursor: 'pointer',
-                background: query.toLowerCase() === tag.toLowerCase() ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.05)',
-                color: query.toLowerCase() === tag.toLowerCase() ? '#fff' : 'var(--text-secondary)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                padding: '0.25rem 0.65rem',
-                borderRadius: '8px',
-                fontSize: '0.76rem',
-                fontWeight: 600,
-                transition: 'all 0.15s'
-              }}
-            >
-              #{tag}
-            </button>
-          ))}
+          {quickSearchTags.map(tag => {
+            const isActive = query.toLowerCase() === tag.toLowerCase();
+            return (
+              <button
+                key={tag}
+                type="button"
+                className={`search-topic-chip ${isActive ? 'active' : ''}`}
+                onClick={() => {
+                  setQuery(tag);
+                  setDebouncedQuery(tag);
+                  if (onQueryChange) onQueryChange(tag);
+                }}
+              >
+                #{tag}
+              </button>
+            );
+          })}
         </div>
       </div>
 

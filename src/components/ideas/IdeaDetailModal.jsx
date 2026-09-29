@@ -219,22 +219,22 @@ export default function IdeaDetailModal({
           </div>
 
           {/* Impact */}
-          <div className="glass-panel" style={{ padding: '1.25rem', background: 'rgba(16, 185, 129, 0.04)', border: '1px solid rgba(16, 185, 129, 0.15)' }}>
-            <h3 style={{ fontSize: '1.05rem', color: '#34d399', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <div className="glass-panel idea-impact-box" style={{ padding: '1.25rem' }}>
+            <h3 className="idea-impact-title" style={{ fontSize: '1.05rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               🚀 Expected Campus Impact
             </h3>
-            <p style={{ lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap' }}>{idea.impact}</p>
+            <p className="idea-impact-text" style={{ lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap' }}>{idea.impact}</p>
           </div>
 
           {/* Skills & Roles */}
           <div className="responsive-grid grid-2" style={{ gap: '1rem' }}>
             <div className="glass-panel" style={{ padding: '1.25rem' }}>
-              <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
                 Required Skills
               </h4>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                 {(idea.skillsRequired || []).map((skill, i) => (
-                  <span key={i} className="tag" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#a5b4fc', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
+                  <span key={i} className="idea-skill-tag">
                     {skill}
                   </span>
                 ))}
@@ -242,12 +242,12 @@ export default function IdeaDetailModal({
             </div>
 
             <div className="glass-panel" style={{ padding: '1.25rem' }}>
-              <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
                 Contribution Roles Needed
               </h4>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                 {(idea.contributionTypes || []).map((role, i) => (
-                  <span key={i} className="tag" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                  <span key={i} className="idea-role-tag">
                     {role}
                   </span>
                 ))}

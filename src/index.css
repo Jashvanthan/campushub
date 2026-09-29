@@ -12312,4 +12312,209 @@ select.form-control optgroup {
   }
 }
 
+/* ─── Idea Skill & Role Tag Polish (Light & Dark Mode) ─── */
+.idea-skill-tag {
+  background: rgba(99, 102, 241, 0.15);
+  color: #c7d2fe;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  padding: 0.35rem 0.8rem;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+.idea-skill-tag:hover {
+  transform: translateY(-1px);
+  border-color: rgba(99, 102, 241, 0.6);
+}
+
+.idea-role-tag {
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  padding: 0.35rem 0.8rem;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+.idea-role-tag:hover {
+  transform: translateY(-1px);
+  border-color: rgba(16, 185, 129, 0.6);
+}
+
+.idea-impact-box {
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 12px;
+}
+.idea-impact-title {
+  color: #34d399;
+  font-weight: 700;
+}
+.idea-impact-text {
+  color: var(--text-primary);
+}
+
+/* Light Theme Overrides for Idea Tags & Impact */
+[data-theme="light"] .idea-skill-tag {
+  background: #eef2ff;
+  color: #3730a3;
+  border: 1.5px solid #c7d2fe;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(79, 70, 229, 0.08);
+}
+[data-theme="light"] .idea-skill-tag:hover {
+  background: #e0e7ff;
+  border-color: #818cf8;
+  color: #312e81;
+}
+
+[data-theme="light"] .idea-role-tag {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1.5px solid #a7f3d0;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(5, 150, 105, 0.08);
+}
+[data-theme="light"] .idea-role-tag:hover {
+  background: #d1fae5;
+  border-color: #34d399;
+  color: #047857;
+}
+
+[data-theme="light"] .idea-impact-box {
+  background: #f0fdf4;
+  border: 1.5px solid #bbf7d0;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.06);
+}
+[data-theme="light"] .idea-impact-title {
+  color: #047857;
+  font-weight: 700;
+}
+[data-theme="light"] .idea-impact-text {
+  color: #1e293b;
+}
+
+/* ─── Profile Metric Stats (Light & Dark Mode) ─── */
+.profile-stat-val {
+  font-size: 1.65rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.2rem;
+}
+.profile-stat-val.val-posts, .stat-num.stat-posts {
+  color: #818cf8;
+}
+.profile-stat-val.val-ideas, .stat-num.stat-ideas {
+  color: #fbbf24;
+}
+.profile-stat-val.val-workspaces, .stat-num.stat-workspaces {
+  color: #34d399;
+}
+.profile-stat-val.val-contributions {
+  color: #c084fc;
+}
+.stat-num.stat-likes {
+  color: #f43f5e;
+}
+.profile-stat-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+[data-theme="light"] .profile-metric-card {
+  background: #ffffff !important;
+  border: 1.5px solid rgba(0, 0, 0, 0.07) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04) !important;
+  border-radius: 12px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+[data-theme="light"] .profile-metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.08) !important;
+}
+
+[data-theme="light"] .profile-stat-val.val-posts, 
+[data-theme="light"] .stat-num.stat-posts {
+  color: #4338ca !important;
+}
+[data-theme="light"] .profile-stat-val.val-ideas, 
+[data-theme="light"] .stat-num.stat-ideas {
+  color: #d97706 !important;
+}
+[data-theme="light"] .profile-stat-val.val-workspaces, 
+[data-theme="light"] .stat-num.stat-workspaces {
+  color: #047857 !important;
+}
+[data-theme="light"] .profile-stat-val.val-contributions {
+  color: #7e22ce !important;
+}
+[data-theme="light"] .stat-num.stat-likes {
+  color: #e11d48 !important;
+}
+[data-theme="light"] .profile-stat-label,
+[data-theme="light"] .user-profile-stat-card .stat-label {
+  color: #475569 !important;
+  font-weight: 700;
+}
+[data-theme="light"] .user-profile-stat-card {
+  background: #ffffff !important;
+  border: 1.5px solid rgba(0, 0, 0, 0.07) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* ─── Search Popular Topics Chips (Light & Dark Mode) ─── */
+.search-topic-chip {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.3rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+}
+.search-topic-chip:hover {
+  background: rgba(99, 102, 241, 0.18);
+  color: #fff;
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+}
+.search-topic-chip.active {
+  background: var(--accent-primary);
+  color: #fff;
+  border-color: var(--accent-primary);
+  font-weight: 700;
+}
+
+[data-theme="light"] .search-topic-chip {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+[data-theme="light"] .search-topic-chip:hover {
+  background: #e0e7ff;
+  color: #4338ca;
+  border-color: #a5b4fc;
+  transform: translateY(-1px);
+}
+[data-theme="light"] .search-topic-chip.active {
+  background: #4f46e5;
+  color: #ffffff;
+  border-color: #4338ca;
+}
+
+
 

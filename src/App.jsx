@@ -3513,25 +3513,25 @@ export default function App() {
                 </div>
 
                 {/* High-Level Metric Stats Grid */}
-                <div className="responsive-grid grid-4" style={{ gap:'0.75rem', padding:'0 1.5rem', marginBottom:'1.75rem' }}>
-                  <div className="glass-panel" style={{ padding:'1rem', textAlign:'center', background:'rgba(255,255,255,0.02)' }}>
-                    <div style={{ fontSize:'1.6rem', fontWeight:800, color:'#818cf8' }}>{userPosts.length}</div>
-                    <span style={{ fontSize:'0.75rem', color:'var(--text-secondary)', textTransform:'uppercase', fontWeight:700 }}>Posts Published</span>
+                <div className="responsive-grid grid-4 profile-metrics-grid" style={{ gap:'0.75rem', padding:'0 1.5rem', marginBottom:'1.75rem' }}>
+                  <div className="glass-panel profile-metric-card" style={{ padding:'1rem', textAlign:'center' }}>
+                    <div className="profile-stat-val val-posts">{userPosts.length}</div>
+                    <span className="profile-stat-label">Posts Published</span>
                   </div>
 
-                  <div className="glass-panel" style={{ padding:'1rem', textAlign:'center', background:'rgba(255,255,255,0.02)' }}>
-                    <div style={{ fontSize:'1.6rem', fontWeight:800, color:'#fbbf24' }}>{userIdeas.length}</div>
-                    <span style={{ fontSize:'0.75rem', color:'var(--text-secondary)', textTransform:'uppercase', fontWeight:700 }}>Ideas Submitted</span>
+                  <div className="glass-panel profile-metric-card" style={{ padding:'1rem', textAlign:'center' }}>
+                    <div className="profile-stat-val val-ideas">{userIdeas.length}</div>
+                    <span className="profile-stat-label">Ideas Submitted</span>
                   </div>
 
-                  <div className="glass-panel" style={{ padding:'1rem', textAlign:'center', background:'rgba(255,255,255,0.02)' }}>
-                    <div style={{ fontSize:'1.6rem', fontWeight:800, color:'#34d399' }}>{userWorkspaces.length}</div>
-                    <span style={{ fontSize:'0.75rem', color:'var(--text-secondary)', textTransform:'uppercase', fontWeight:700 }}>Workspaces Joined</span>
+                  <div className="glass-panel profile-metric-card" style={{ padding:'1rem', textAlign:'center' }}>
+                    <div className="profile-stat-val val-workspaces">{userWorkspaces.length}</div>
+                    <span className="profile-stat-label">Workspaces Joined</span>
                   </div>
 
-                  <div className="glass-panel" style={{ padding:'1rem', textAlign:'center', background:'rgba(255,255,255,0.02)' }}>
-                    <div style={{ fontSize:'1.6rem', fontWeight:800, color:'#c084fc' }}>{userContributions.length + userTasksCompleted.length}</div>
-                    <span style={{ fontSize:'0.75rem', color:'var(--text-secondary)', textTransform:'uppercase', fontWeight:700 }}>Contributions</span>
+                  <div className="glass-panel profile-metric-card" style={{ padding:'1rem', textAlign:'center' }}>
+                    <div className="profile-stat-val val-contributions">{userContributions.length + userTasksCompleted.length}</div>
+                    <span className="profile-stat-label">Contributions</span>
                   </div>
                 </div>
 
