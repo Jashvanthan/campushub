@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime, timezone
 import json
-from ..models import db, Post, PostLike, PostComment, EventRegistration, Notification
+from ..models import db, Post, PostLike, PostComment, EventRegistration, Notification, Idea, IdeaSupport
 from ..utils.auth_helpers import jwt_required
 from ..services.recommendation_service import RecommendationService
 
@@ -243,28 +243,71 @@ def toggle_like(current_user, post_id):
 
     target_id = post.id
     existing_like = PostLike.query.filter_by(post_id=target_id, username=current_user.username).first()
-    if existing_like:
-        db.session.delete(existing_like)
-        liked = False
-    else:
+
+    # Check if this post is linked to an Idea or Workspace
+    matching_idea = db.session.get(Idea, f"idea-{target_id}")
+    if not matching_idea:
+        matching_idea = db.session.get(Idea, str(target_id))
+    if not matching_idea:
+        matching_idea = Idea.query.filter(Idea.title.ilike(post.title)).first()
+
+    existing_idea_support = None
+    if matching_idea:
+        existing_idea_support = IdeaSupport.query.filter_by(idea_id=matching_idea.id, username=current_user.username).first()
+
+    # If this is an idea post and user has already liked/supported it: STRICT RULE -> Cannot relike
+    if post.type == 'idea' or matching_idea:
+        if existing_like or existing_idea_support:
+            if not existing_like:
+                db.session.add(PostLike(post_id=target_id, username=current_user.username))
+                db.session.commit()
+            if matching_idea and not existing_idea_support:
+                db.session.add(IdeaSupport(idea_id=matching_idea.id, username=current_user.username))
+                db.session.commit()
+
+            fresh_likes = PostLike.query.filter_by(post_id=target_id).all()
+            liked_users = [l.username for l in fresh_likes]
+            fresh_post = db.session.get(Post, target_id)
+            return jsonify({
+                'success': False,
+                'alreadyLiked': True,
+                'message': 'You have already liked this idea post and cannot like again.',
+                'liked': True,
+                'likes': len(liked_users),
+                'likedBy': liked_users,
+                'post': fresh_post.to_dict() if fresh_post else None
+            }), 200
+
+        # First time liking the idea post
         new_like = PostLike(post_id=target_id, username=current_user.username)
         db.session.add(new_like)
+        if matching_idea:
+            db.session.add(IdeaSupport(idea_id=matching_idea.id, username=current_user.username))
         liked = True
+    else:
+        # Standard post toggle
+        if existing_like:
+            db.session.delete(existing_like)
+            liked = False
+        else:
+            new_like = PostLike(post_id=target_id, username=current_user.username)
+            db.session.add(new_like)
+            liked = True
 
-        # Notify post author if not self
-        if post.author_id and post.author_id != current_user.username:
-            notif = Notification(
-                recipient_id=post.author_id,
-                sender_id=current_user.username,
-                sender_name=current_user.name or current_user.username,
-                sender_avatar=current_user.avatar,
-                type='post_like',
-                title='New Like on your post',
-                message=f"{current_user.name or current_user.username} liked your post \"{post.title}\"",
-                target_tab='explore',
-                target_id=str(target_id)
-            )
-            db.session.add(notif)
+    # Notify post author if not self
+    if liked and post.author_id and post.author_id != current_user.username:
+        notif = Notification(
+            recipient_id=post.author_id,
+            sender_id=current_user.username,
+            sender_name=current_user.name or current_user.username,
+            sender_avatar=current_user.avatar,
+            type='post_like',
+            title='New Like on your post',
+            message=f"{current_user.name or current_user.username} liked your post \"{post.title}\"",
+            target_tab='explore',
+            target_id=str(target_id)
+        )
+        db.session.add(notif)
 
     db.session.commit()
     db.session.expire_all()

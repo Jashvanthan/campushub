@@ -5,7 +5,7 @@ from ..models import (
     db, Idea, IdeaSupport, IdeaFollower, ContributionRequest,
     Workspace, WorkspaceMember, Task, Milestone,
     Discussion, DiscussionReply, WorkspaceFile,
-    Activity, ChatMessage, Notification
+    Activity, ChatMessage, Notification, Post, PostLike
 )
 from ..utils.auth_helpers import jwt_required
 
@@ -208,25 +208,64 @@ def delete_idea(current_user, idea_id):
 def toggle_support(current_user, idea_id):
     idea = db.session.get(Idea, idea_id)
     if not idea:
-        return jsonify({'success': False, 'message': 'Idea not found'}), 404
+        # Fallback check workspace ID
+        ws = db.session.get(Workspace, idea_id)
+        if ws and ws.idea_id:
+            idea = db.session.get(Idea, ws.idea_id)
+        if not idea:
+            return jsonify({'success': False, 'message': 'Idea or Workspace not found'}), 404
 
-    existing = IdeaSupport.query.filter_by(idea_id=idea_id, username=current_user.username).first()
-    if existing:
-        # Strict Rule: User has already supported this idea and cannot relike/duplicate
-        fresh_supports = IdeaSupport.query.filter_by(idea_id=idea_id).all()
+    target_idea_id = idea.id
+
+    # 1. Check if user already supported via IdeaSupport table
+    existing_support = IdeaSupport.query.filter_by(idea_id=target_idea_id, username=current_user.username).first()
+
+    # 2. Check if user already liked the corresponding Idea Post in PostLike table
+    matching_post = None
+    try:
+        numeric_id = int(str(target_idea_id).replace('idea-', ''))
+        matching_post = db.session.get(Post, numeric_id)
+    except (ValueError, TypeError):
+        pass
+
+    if not matching_post:
+        matching_post = Post.query.filter(
+            (Post.title.ilike(idea.title)) & 
+            ((Post.type == 'idea') | (Post.type == 'project'))
+        ).first()
+
+    existing_post_like = None
+    if matching_post:
+        existing_post_like = PostLike.query.filter_by(post_id=matching_post.id, username=current_user.username).first()
+
+    # STRICT RULE: If the user has already liked the idea post or supported the workspace, they CANNOT like again
+    if existing_support or existing_post_like:
+        if not existing_support:
+            db.session.add(IdeaSupport(idea_id=target_idea_id, username=current_user.username))
+            db.session.commit()
+        if matching_post and not existing_post_like:
+            db.session.add(PostLike(post_id=matching_post.id, username=current_user.username))
+            db.session.commit()
+
+        fresh_supports = IdeaSupport.query.filter_by(idea_id=target_idea_id).all()
         supported_users = [s.username for s in fresh_supports]
         return jsonify({
-            'success': True,
-            'message': 'You have already supported this idea.',
+            'success': False,
+            'alreadyLiked': True,
             'alreadySupported': True,
+            'message': 'You have already liked this idea post and cannot like again.',
             'supported': True,
             'supportCount': len(supported_users),
             'supportedBy': supported_users
         }), 200
 
-    db.session.add(IdeaSupport(idea_id=idea_id, username=current_user.username))
+    # Record new support in IdeaSupport and PostLike
+    db.session.add(IdeaSupport(idea_id=target_idea_id, username=current_user.username))
+    if matching_post:
+        db.session.add(PostLike(post_id=matching_post.id, username=current_user.username))
+
     db.session.commit()
-    fresh_supports = IdeaSupport.query.filter_by(idea_id=idea_id).all()
+    fresh_supports = IdeaSupport.query.filter_by(idea_id=target_idea_id).all()
     supported_users = [s.username for s in fresh_supports]
     return jsonify({
         'success': True,

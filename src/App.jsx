@@ -1359,6 +1359,18 @@ export default function App() {
   function handleLike(id) {
     if (!session) return;
     const u = session.username;
+
+    const targetPost = (posts || []).find(p => p.id === id || String(p.id) === String(id));
+    const matchingIdea = (ideas || []).find(i => (targetPost && i.title && targetPost.title && i.title.toLowerCase().trim() === targetPost.title.toLowerCase().trim()) || String(i.id) === String(id) || i.id === `idea-${id}`);
+
+    const isAlreadyLiked = targetPost && Array.isArray(targetPost.likedBy) && targetPost.likedBy.includes(u);
+    const isAlreadySupported = matchingIdea && (matchingIdea.supportedBy || []).includes(u);
+
+    // Strict Rule: If this is an idea post and user has already liked/supported it, prevent re-liking
+    if (targetPost && (targetPost.type === 'idea' || matchingIdea) && (isAlreadyLiked || isAlreadySupported)) {
+      setToast('✓ You have already liked this idea post.');
+      return;
+    }
     
     // 1. Optimistically update local posts state
     setPosts(prev => {
@@ -1393,10 +1405,27 @@ export default function App() {
       return next;
     });
 
+    // Also sync matching idea support in state if idea post
+    if (matchingIdea && !isAlreadySupported) {
+      setIdeas(prev => {
+        const next = (prev || []).map(i => {
+          if (i.id !== matchingIdea.id && String(i.id) !== String(matchingIdea.id)) return i;
+          return {
+            ...i,
+            supportedBy: [...(i.supportedBy || []), u],
+            supportCount: (i.supportCount || i.supportedBy?.length || 0) + 1
+          };
+        });
+        broadcast('SYNC_IDEAS', next);
+        storageManager.setItem('campushub_ideas', next);
+        return next;
+      });
+    }
+
     // 2. Synchronize with database API
     try { 
       api.toggleLike(id).then((res) => {
-        if (res && res.success) {
+        if (res) {
           setPosts(prev => {
             const synced = prev.map(p => {
               if (p.id !== id && String(p.id) !== String(id)) return p;
@@ -1761,10 +1790,15 @@ export default function App() {
     if (!session) return;
     const u = session.username;
 
-    // Strict Rule: If already supported, prevent re-liking
+    // Strict Rule: Check if already supported on idea OR already liked on idea post
     const currentIdea = (ideas || []).find(i => i.id === ideaId || String(i.id) === String(ideaId));
-    if (currentIdea && (currentIdea.supportedBy || []).includes(u)) {
-      setToast('✓ You have already supported this idea.');
+    const matchingPost = (posts || []).find(p => (currentIdea && p.title && currentIdea.title && p.title.toLowerCase().trim() === currentIdea.title.toLowerCase().trim()) || String(p.id) === String(ideaId) || String(p.id) === String(ideaId).replace('idea-', ''));
+
+    const alreadySupported = currentIdea && (currentIdea.supportedBy || []).includes(u);
+    const alreadyLikedPost = matchingPost && Array.isArray(matchingPost.likedBy) && matchingPost.likedBy.includes(u);
+
+    if (alreadySupported || alreadyLikedPost) {
+      setToast('✓ You have already liked this idea post.');
       return;
     }
 
@@ -1789,12 +1823,28 @@ export default function App() {
       storageManager.setItem('campushub_ideas', next);
       return next;
     });
+
+    // Also sync like on matching post if exists
+    if (matchingPost) {
+      setPosts(prev => {
+        const next = (prev || []).map(p => {
+          if (p.id !== matchingPost.id && String(p.id) !== String(matchingPost.id)) return p;
+          const lb = Array.isArray(p.likedBy) ? p.likedBy : [];
+          if (lb.includes(u)) return p;
+          return { ...p, likedBy: [...lb, u], likes: (p.likes || 0) + 1 };
+        });
+        broadcast('SYNC_POSTS', next);
+        storageManager.setItem('campushub_posts', next);
+        return next;
+      });
+    }
+
     setToast('✓ Thank you for supporting this idea!');
 
     // Persist to Backend API Database
     try {
       const res = await api.toggleSupport(ideaId);
-      if (res && res.success && res.supportedBy) {
+      if (res && res.supportedBy) {
         setIdeas(prev => {
           const next = (prev || []).map(idea => {
             if (idea.id !== ideaId && String(idea.id) !== String(ideaId)) return idea;
