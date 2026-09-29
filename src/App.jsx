@@ -3544,7 +3544,7 @@ export default function App() {
                     <form onSubmit={handleStudentProfile}>
                       <div className="responsive-grid profile-settings-grid">
                         <div className="profile-avatar-container">
-                          <div className="post-avatar profile-preview-avatar" style={{ width:'110px', height:'110px', fontSize:'2.2rem', marginBottom:'1rem', overflow:'hidden', transition:'transform 0.3s' }}
+                          <div className="profile-preview-avatar"
                             onMouseEnter={e=>e.currentTarget.style.transform='scale(1.05)'}
                             onMouseLeave={e=>e.currentTarget.style.transform=''}>
                             {renderAvatarContent(avatarPreview || session.avatar, session.name, session.username, (session.name || session.username || 'U').slice(0, 2).toUpperCase())}
