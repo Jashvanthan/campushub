@@ -671,7 +671,15 @@ export default function App() {
   }, [session]);
 
   // Deep-linking URL routing & browser back/forward navigation
-  const [highlightPostId, setHighlightPostId] = useState(null);
+  const [highlightPostId, setHighlightPostId] = useState(() => {
+    const pathname = (typeof window !== 'undefined' ? window.location.pathname : '').toLowerCase();
+    const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    if (pathname.startsWith('/post/')) {
+      const parts = pathname.split('/').filter(Boolean);
+      return parts[1] || null;
+    }
+    return params.get('post') || null;
+  });
 
   useEffect(() => {
     const parseUrlRoute = () => {
@@ -725,35 +733,43 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Smooth scroll, fetch & highlight shared post if targeted in URL
+  // Smooth scroll, fetch & open shared post modal when targeted in URL
   useEffect(() => {
-    if (!highlightPostId || loading) return;
+    if (!highlightPostId) return;
 
     let isMounted = true;
-    const scrollAndHighlight = () => {
-      const el = document.getElementById(`post-${highlightPostId}`);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el.classList.add('post-highlight-pulse');
-        setTimeout(() => el.classList.remove('post-highlight-pulse'), 4000);
-      }
+    const targetIdStr = String(highlightPostId);
+
+    const showPost = (p) => {
+      if (!p || !isMounted) return;
+      setViewingSharedPost(p);
+      setTimeout(() => {
+        const el = document.getElementById(`post-${p.id}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('post-highlight-pulse');
+          setTimeout(() => el.classList.remove('post-highlight-pulse'), 4000);
+        }
+      }, 300);
     };
 
-    const existsLocally = (posts || []).some(p => String(p.id) === String(highlightPostId));
-    if (!existsLocally) {
-      api.getPost(highlightPostId).then(res => {
+    const localMatch = (posts || SEED_POSTS || []).find(p => String(p.id) === targetIdStr);
+    if (localMatch) {
+      showPost(localMatch);
+    } else {
+      api.getPost(targetIdStr).then(res => {
         if (isMounted && res && res.success && res.post) {
           setPosts(prev => [res.post, ...(prev || []).filter(p => String(p.id) !== String(res.post.id))]);
-          setTimeout(scrollAndHighlight, 300);
+          showPost(res.post);
         }
-      }).catch(() => {});
-    } else {
-      const timer = setTimeout(scrollAndHighlight, 400);
-      return () => clearTimeout(timer);
+      }).catch(() => {
+        const fallback = (SEED_POSTS || []).find(p => String(p.id) === targetIdStr);
+        if (fallback) showPost(fallback);
+      });
     }
 
     return () => { isMounted = false; };
-  }, [highlightPostId, loading, posts]);
+  }, [highlightPostId, posts]);
 
   const handleIntroComplete = useCallback(() => {
     sessionStorage.setItem('campushub_intro_played', 'true');
@@ -2708,6 +2724,131 @@ export default function App() {
       <WarpSpeedCanvas isApp={!!session} />
       <VoidBackground isApp={!!session} />
 
+      {/* Shared Post Direct View Modal - Global overlay */}
+      {viewingSharedPost && (
+        <ModalPortal>
+          <div className="modal-overlay" style={{ zIndex: 99999 }} onClick={() => {
+            setViewingSharedPost(null);
+            if (window.location.pathname.startsWith('/post/')) {
+              try { window.history.pushState({ tab: 'all' }, '', '/'); } catch (_) {}
+            }
+          }}>
+            <div
+              className="glass-panel"
+              style={{
+                maxWidth: '680px',
+                width: '95%',
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                padding: '1.25rem',
+                borderRadius: '16px',
+                border: '1px solid var(--border-color)',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.7)',
+                animation: 'scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both'
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.25rem 0.75rem', borderRadius: '20px', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(236, 72, 153, 0.2))', color: 'var(--accent-primary)', border: '1px solid rgba(99,102,241,0.35)' }}>
+                    ✨ Shared Post
+                  </span>
+                  {!session && (
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      Viewing on CampusHub
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  onClick={() => {
+                    setViewingSharedPost(null);
+                    if (window.location.pathname.startsWith('/post/')) {
+                      try { window.history.pushState({ tab: 'all' }, '', '/'); } catch (_) {}
+                    }
+                  }}
+                  title="Close"
+                  style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <PostCard
+                post={viewingSharedPost}
+                user={session}
+                onLike={handleLike}
+                onDelete={(id) => {
+                  handleDeletePost(id);
+                  setViewingSharedPost(null);
+                }}
+                onEdit={(p) => {
+                  setEditingPost(p);
+                  setShowNewPost(true);
+                  setViewingSharedPost(null);
+                }}
+                onToggleComment={id => setOpenComment(p => p===id?null:id)}
+                commentOpen={openComment === viewingSharedPost.id}
+                commentText={commentText}
+                onCommentChange={setCommentText}
+                onCommentSubmit={handleCommentSubmit}
+                onDeleteComment={handleDeleteComment}
+                onShare={handleShare}
+                onToggleResolve={handleToggleResolve}
+                onClearIssue={(id) => {
+                  handleClearIssue(id);
+                  setViewingSharedPost(null);
+                }}
+                isAdmin={isAdmin}
+                isAuthenticated={isAuth}
+                contributionRequests={contributionRequests || []}
+                workspaces={workspaces || []}
+                ideas={ideas || []}
+                users={users || {}}
+                onNavigateToWorkspace={(wsId) => {
+                  setViewingSharedPost(null);
+                  setActiveWorkspaceId(wsId);
+                  navTo('workspaces');
+                }}
+                onJoinContribution={(p) => {
+                  setViewingSharedPost(null);
+                  setJoinModalPost(p);
+                }}
+                onManageRequests={(p) => {
+                  setViewingSharedPost(null);
+                  setManageRequestsPost(p);
+                }}
+                onOpenUserProfile={(userKey, author) => {
+                  setViewingSharedPost(null);
+                  handleOpenUserProfile(userKey, author);
+                }}
+              />
+
+              {!session && (
+                <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(99, 102, 241, 0.08)', borderRadius: '12px', border: '1px solid rgba(99, 102, 241, 0.2)', textAlign: 'center' }}>
+                  <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    Want to like, comment, or collaborate on this project?
+                  </p>
+                  <button 
+                    className="primary-btn" 
+                    style={{ padding: '0.5rem 1.2rem', fontSize: '0.85rem', borderRadius: '8px' }}
+                    onClick={() => {
+                      setViewingSharedPost(null);
+                      if (window.location.pathname.startsWith('/post/')) {
+                        try { window.history.pushState({ tab: 'all' }, '', '/'); } catch (_) {}
+                      }
+                    }}
+                  >
+                    Log In / Sign Up to CampusHub
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </ModalPortal>
+      )}
+
       {loading ? (
         <div className="loading-screen">
           <div className="loading-spinner" style={{ zIndex: 10 }} />
@@ -4017,105 +4158,8 @@ export default function App() {
         />
       )}
 
-      {/* Shared Post Direct View Modal */}
-      {viewingSharedPost && (
-        <ModalPortal>
-          <div className="modal-overlay" onClick={() => {
-            setViewingSharedPost(null);
-            if (window.location.pathname.startsWith('/post/')) {
-              try { window.history.pushState({ tab: 'all' }, '', '/'); } catch (_) {}
-            }
-          }}>
-            <div
-              className="glass-panel"
-              style={{
-                maxWidth: '680px',
-                width: '95%',
-                maxHeight: '90vh',
-                overflowY: 'auto',
-                padding: '1.25rem',
-                borderRadius: '16px',
-                border: '1px solid var(--border-color)',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
-                animation: 'scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both'
-              }}
-              onClick={e => e.stopPropagation()}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.25rem 0.75rem', borderRadius: '20px', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(236, 72, 153, 0.2))', color: 'var(--accent-primary)', border: '1px solid rgba(99,102,241,0.35)' }}>
-                    ✨ Shared Post
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  className="icon-btn"
-                  onClick={() => {
-                    setViewingSharedPost(null);
-                    if (window.location.pathname.startsWith('/post/')) {
-                      try { window.history.pushState({ tab: 'all' }, '', '/'); } catch (_) {}
-                    }
-                  }}
-                  title="Close"
-                  style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <X size={18} />
-                </button>
-              </div>
 
-              <PostCard
-                post={viewingSharedPost}
-                user={session}
-                onLike={handleLike}
-                onDelete={(id) => {
-                  handleDeletePost(id);
-                  setViewingSharedPost(null);
-                }}
-                onEdit={(p) => {
-                  setEditingPost(p);
-                  setShowNewPost(true);
-                  setViewingSharedPost(null);
-                }}
-                onToggleComment={id => setOpenComment(p => p===id?null:id)}
-                commentOpen={openComment === viewingSharedPost.id}
-                commentText={commentText}
-                onCommentChange={setCommentText}
-                onCommentSubmit={handleCommentSubmit}
-                onDeleteComment={handleDeleteComment}
-                onShare={handleShare}
-                onToggleResolve={handleToggleResolve}
-                onClearIssue={(id) => {
-                  handleClearIssue(id);
-                  setViewingSharedPost(null);
-                }}
-                isAdmin={isAdmin}
-                isAuthenticated={isAuth}
-                contributionRequests={contributionRequests || []}
-                workspaces={workspaces || []}
-                ideas={ideas || []}
-                users={users || {}}
-                onNavigateToWorkspace={(wsId) => {
-                  setViewingSharedPost(null);
-                  setActiveWorkspaceId(wsId);
-                  navTo('workspaces');
-                }}
-                onJoinContribution={(p) => {
-                  setViewingSharedPost(null);
-                  setJoinModalPost(p);
-                }}
-                onManageRequests={(p) => {
-                  setViewingSharedPost(null);
-                  setManageRequestsPost(p);
-                }}
-                onOpenUserProfile={(userKey, author) => {
-                  setViewingSharedPost(null);
-                  handleOpenUserProfile(userKey, author);
-                }}
-              />
-            </div>
-          </div>
-        </ModalPortal>
-      )}
+
 
       {/* Create / Edit Post Modal */}
       {showNewPost && (
