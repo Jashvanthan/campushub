@@ -34,9 +34,33 @@ export default function IdeaDetailModal({
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
 
   const handleShare = async () => {
-    if (navigator.clipboard) {
-      await navigator.clipboard.writeText(window.location.href);
-      showAlert('Idea link has been copied to your clipboard!', 'Link Copied', 'success');
+    try {
+      const compact = {
+        id: idea.id,
+        title: idea.title,
+        description: idea.description || '',
+        type: 'idea',
+        department: idea.department || '',
+        author: { name: idea.creatorName || 'Student', avatar: idea.creatorAvatar || 'S1' },
+        authorId: idea.creatorId || 'student1',
+        tags: idea.tags || [],
+        likes: (idea.supportedBy || []).length || 0,
+        status: idea.status || 'Proposed'
+      };
+      const json = JSON.stringify(compact);
+      const b64 = btoa(encodeURIComponent(json).replace(/%([0-9A-F]{2})/g, (_, p1) => String.fromCharCode('0x' + p1)))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      const shareUrl = `${window.location.origin}/post/${idea.id}?pdata=${b64}`;
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(shareUrl);
+        showAlert('Idea link has been copied to your clipboard!', 'Link Copied', 'success');
+      }
+    } catch (_) {
+      const fallbackUrl = `${window.location.origin}/post/${idea.id}`;
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(fallbackUrl);
+        showAlert('Idea link has been copied to your clipboard!', 'Link Copied', 'success');
+      }
     }
   };
 

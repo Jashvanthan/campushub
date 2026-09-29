@@ -29,6 +29,16 @@ router.get('/', optionalAuth, (req, res) => {
   res.json({ success: true, count: posts.length, posts });
 });
 
+// GET /api/posts/:id
+router.get('/:id', optionalAuth, (req, res) => {
+  const post = db.findById('posts', req.params.id);
+  if (!post) {
+    return res.status(404).json({ success: false, error: 'Post not found.' });
+  }
+  res.json({ success: true, post });
+});
+
+
 // POST /api/posts (Authenticated Student or Admin)
 router.post('/', verifyAuth, requireRole('student', 'admin'), (req, res) => {
   const { title, content, type, department, tags, priority, eventDetails } = req.body;

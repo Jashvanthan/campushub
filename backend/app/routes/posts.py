@@ -80,9 +80,14 @@ def get_posts():
     }), 200
 
 
-@posts_bp.route('/<int:post_id>', methods=['GET'])
+@posts_bp.route('/<post_id>', methods=['GET'])
 def get_post(post_id):
     post = db.session.get(Post, post_id)
+    if not post:
+        try:
+            post = db.session.get(Post, int(post_id))
+        except (ValueError, TypeError):
+            pass
     if not post:
         return jsonify({'success': False, 'message': 'Post not found'}), 404
     return jsonify({

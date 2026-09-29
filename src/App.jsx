@@ -204,6 +204,51 @@ function Toast({ message, onDone }) {
    LoginPage
 ───────────────────────────────────────────────── */
 /* ─────────────────────────────────────────────────
+   Portable Share Data Helpers
+───────────────────────────────────────────────── */
+export function encodePostShareData(post) {
+  try {
+    if (!post) return '';
+    const compact = {
+      id: post.id,
+      title: post.title || '',
+      description: post.description || post.content || '',
+      type: post.type || 'project',
+      department: post.department || '',
+      author: post.author || { name: post.authorId || 'Campus Member', avatar: 'U' },
+      authorId: post.authorId || post.author?.name || 'std1',
+      tags: post.tags || [],
+      image: post.image || null,
+      likes: post.likes || 0,
+      eventDate: post.eventDate || post.eventDetails?.eventDate || null,
+      eventTime: post.eventTime || post.eventDetails?.startTime || null,
+      location: post.location || post.eventDetails?.venue || null,
+      category: post.category || post.eventDetails?.category || null,
+      status: post.status || null,
+      priority: post.priority || null,
+      date: post.date || 'Recently'
+    };
+    const json = JSON.stringify(compact);
+    const b64 = btoa(encodeURIComponent(json).replace(/%([0-9A-F]{2})/g, (_, p1) => String.fromCharCode('0x' + p1)));
+    return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  } catch (_) {
+    return '';
+  }
+}
+
+export function decodePostShareData(encodedStr) {
+  try {
+    if (!encodedStr) return null;
+    let b64 = encodedStr.replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    const json = decodeURIComponent(Array.prototype.map.call(atob(b64), (c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+    return JSON.parse(json);
+  } catch (_) {
+    return null;
+  }
+}
+
+/* ─────────────────────────────────────────────────
    PostCard
 ───────────────────────────────────────────────── */
 function PostCard({
@@ -672,10 +717,11 @@ export default function App() {
 
   // Deep-linking URL routing & browser back/forward navigation
   const [highlightPostId, setHighlightPostId] = useState(() => {
-    const pathname = (typeof window !== 'undefined' ? window.location.pathname : '').toLowerCase();
+    const rawPathname = typeof window !== 'undefined' ? window.location.pathname : '';
+    const lowerPath = rawPathname.toLowerCase();
     const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
-    if (pathname.startsWith('/post/')) {
-      const parts = pathname.split('/').filter(Boolean);
+    if (lowerPath.startsWith('/post/')) {
+      const parts = rawPathname.split('/').filter(Boolean);
       return parts[1] || null;
     }
     return params.get('post') || null;
@@ -683,16 +729,17 @@ export default function App() {
 
   useEffect(() => {
     const parseUrlRoute = () => {
-      const pathname = (window.location.pathname || '').toLowerCase();
+      const rawPathname = window.location.pathname || '';
+      const lowerPath = rawPathname.toLowerCase();
       const params = new URLSearchParams(window.location.search);
       const qParam = params.get('q') || '';
       const postParam = params.get('post') || '';
 
-      if (pathname === '/search' || pathname.startsWith('/search')) {
+      if (lowerPath === '/search' || lowerPath.startsWith('/search')) {
         setActiveTab('search');
         if (qParam) setSearchQuery(qParam);
-      } else if (pathname.startsWith('/post/')) {
-        const parts = pathname.split('/').filter(Boolean);
+      } else if (lowerPath.startsWith('/post/')) {
+        const parts = rawPathname.split('/').filter(Boolean);
         if (parts[1]) {
           setHighlightPostId(parts[1]);
         }
@@ -700,25 +747,25 @@ export default function App() {
       } else if (postParam) {
         setHighlightPostId(postParam);
         setActiveTab('all');
-      } else if (pathname === '/projects') {
+      } else if (lowerPath === '/projects') {
         setActiveTab('projects');
-      } else if (pathname === '/events') {
+      } else if (lowerPath === '/events') {
         setActiveTab('events');
-      } else if (pathname === '/ideas') {
+      } else if (lowerPath === '/ideas') {
         setActiveTab('ideas');
-      } else if (pathname === '/workspaces') {
+      } else if (lowerPath === '/workspaces') {
         setActiveTab('workspaces');
-      } else if (pathname === '/issues') {
+      } else if (lowerPath === '/issues') {
         setActiveTab('issues');
-      } else if (pathname === '/admin') {
+      } else if (lowerPath === '/admin') {
         setActiveTab('admin');
-      } else if (pathname.startsWith('/profile')) {
-        const parts = pathname.split('/').filter(Boolean);
+      } else if (lowerPath.startsWith('/profile')) {
+        const parts = rawPathname.split('/').filter(Boolean);
         if (parts[1]) {
           setSelectedProfileUser({ userKey: parts[1] });
         }
         setActiveTab('profile');
-      } else if (pathname === '/' || pathname === '') {
+      } else if (lowerPath === '/' || lowerPath === '') {
         setActiveTab('all');
       }
     };
@@ -735,10 +782,12 @@ export default function App() {
 
   // Smooth scroll, fetch & open shared post modal when targeted in URL
   useEffect(() => {
-    if (!highlightPostId) return;
+    const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    const pdata = searchParams.get('pdata');
+    if (!highlightPostId && !pdata) return;
 
     let isMounted = true;
-    const targetIdStr = String(highlightPostId);
+    const targetIdStr = highlightPostId ? String(highlightPostId) : '';
 
     const showPost = (p) => {
       if (!p || !isMounted) return;
@@ -753,10 +802,57 @@ export default function App() {
       }, 300);
     };
 
+    // 1. First priority: Check portable URL payload (?pdata=...)
+    if (pdata) {
+      const decoded = decodePostShareData(pdata);
+      if (decoded) {
+        setPosts(prev => [decoded, ...(prev || []).filter(p => String(p.id) !== String(decoded.id))]);
+        showPost(decoded);
+        return;
+      }
+    }
+
+    if (!targetIdStr) return;
+
+    // 2. Check local posts state and SEED_POSTS
     const localMatch = (posts || SEED_POSTS || []).find(p => String(p.id) === targetIdStr);
     if (localMatch) {
       showPost(localMatch);
-    } else {
+      return;
+    }
+
+    // 3. Check directly in storageManager cache
+    storageManager.getItem('campushub_posts').then(cached => {
+      if (!isMounted) return;
+      if (Array.isArray(cached)) {
+        const cachedMatch = cached.find(p => String(p.id) === targetIdStr);
+        if (cachedMatch) {
+          setPosts(prev => [cachedMatch, ...(prev || []).filter(p => String(p.id) !== String(cachedMatch.id))]);
+          showPost(cachedMatch);
+          return;
+        }
+      }
+
+      // 4. Check ideas state and SEED_IDEAS
+      const ideaMatch = (ideas || SEED_IDEAS || []).find(i => String(i.id) === targetIdStr);
+      if (ideaMatch) {
+        const asPost = {
+          id: ideaMatch.id,
+          title: ideaMatch.title,
+          description: ideaMatch.description,
+          type: 'idea',
+          department: ideaMatch.department,
+          author: { name: ideaMatch.creatorName || 'Student', avatar: ideaMatch.creatorAvatar || 'S1' },
+          authorId: ideaMatch.creatorId,
+          tags: ideaMatch.tags || [],
+          likes: (ideaMatch.supportedBy || []).length || 0,
+          status: ideaMatch.status || 'Proposed'
+        };
+        showPost(asPost);
+        return;
+      }
+
+      // 5. Fetch from backend API
       api.getPost(targetIdStr).then(res => {
         if (isMounted && res && res.success && res.post) {
           setPosts(prev => [res.post, ...(prev || []).filter(p => String(p.id) !== String(res.post.id))]);
@@ -766,10 +862,10 @@ export default function App() {
         const fallback = (SEED_POSTS || []).find(p => String(p.id) === targetIdStr);
         if (fallback) showPost(fallback);
       });
-    }
+    }).catch(() => {});
 
     return () => { isMounted = false; };
-  }, [highlightPostId, posts]);
+  }, [highlightPostId, posts, ideas]);
 
   const handleIntroComplete = useCallback(() => {
     sessionStorage.setItem('campushub_intro_played', 'true');
@@ -1410,7 +1506,9 @@ export default function App() {
   }
 
   async function handleShare(post) {
-    const postUrl = `${window.location.origin}/post/${post.id}`;
+    if (!post) return;
+    const payload = encodePostShareData(post);
+    const postUrl = `${window.location.origin}/post/${post.id}${payload ? `?pdata=${payload}` : ''}`;
     const data = { 
       title: post.title, 
       text: post.description ? `${post.title} — ${post.description.substring(0, 100)}...` : `Check out: ${post.title}`, 
@@ -4171,15 +4269,19 @@ export default function App() {
               setPosts(prev => {
                 const updated = prev.map(p => p.id === newPost.id ? newPost : p);
                 broadcast('SYNC_POSTS', updated, `Post updated: ${newPost.title}`);
+                storageManager.setItem('campushub_posts', updated);
                 return updated;
               });
+              try { api.updatePost(newPost.id, newPost).catch(() => {}); } catch(e) {}
               setEditingPost(null);
             } else {
               setPosts(prev => {
                 const updated = [newPost, ...prev];
                 broadcast('SYNC_POSTS', updated, `${session.username} published: ${newPost.title}`);
+                storageManager.setItem('campushub_posts', updated);
                 return updated;
               });
+              try { api.createPost(newPost).catch(() => {}); } catch(e) {}
             }
             setShowNewPost(false);
             setToast(`✓ Post "${newPost.title}" published successfully!`);
