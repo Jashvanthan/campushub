@@ -258,7 +258,8 @@ function PostCard({
   onDeleteComment, onShare, onToggleResolve, onClearIssue,
   isAdmin, isAuthenticated, contributionRequests = [],
   workspaces = [], ideas = [], users = {}, onNavigateToWorkspace,
-  onJoinContribution, onManageRequests, onOpenUserProfile
+  onJoinContribution, onManageRequests, onOpenUserProfile,
+  isModal = false
 }) {
   const { showConfirm } = usePopup();
   // STRICT: Only the user whose username strictly matches post.authorId is the owner
@@ -300,7 +301,7 @@ function PostCard({
   const pendingReqsCount = postRequests.filter(r => r.status === 'PENDING').length;
 
   return (
-    <div className="post-card glass-panel" id={`post-${post.id}`}>
+    <div className={`post-card${isModal ? ' is-modal-view' : ' glass-panel'}`} id={isModal ? undefined : `post-${post.id}`}>
       {/* Header */}
       <div className="post-header">
         <div 
@@ -809,14 +810,6 @@ export default function App() {
     const showPost = (p) => {
       if (!p || !isMounted) return;
       setViewingSharedPost(p);
-      setTimeout(() => {
-        const el = document.getElementById(`post-${p.id}`);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          el.classList.add('post-highlight-pulse');
-          setTimeout(() => el.classList.remove('post-highlight-pulse'), 4000);
-        }
-      }, 300);
     };
 
     // 1. First priority: Check portable URL payload (?pdata=...)
@@ -2950,6 +2943,7 @@ export default function App() {
               <PostCard
                 post={viewingSharedPost}
                 user={session}
+                isModal={true}
                 onLike={handleLike}
                 onDelete={(id) => {
                   handleDeletePost(id);

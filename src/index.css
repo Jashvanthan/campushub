@@ -1667,6 +1667,15 @@ select.form-control optgroup {
   box-sizing: border-box;
   animation: fadeIn 0.2s ease-out both;
 }
+.post-card.is-modal-view {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
 .modal-content {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
