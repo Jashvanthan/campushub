@@ -823,7 +823,13 @@ export default function App() {
     if (pdata) {
       const decoded = decodePostShareData(pdata);
       if (decoded) {
-        setPosts(prev => [decoded, ...(prev || []).filter(p => String(p.id) !== String(decoded.id))]);
+        setPosts(prev => {
+          const currentList = (prev && prev.length > 0) ? prev : (SEED_POSTS || []);
+          const others = currentList.filter(p => String(p.id) !== String(decoded.id));
+          const combined = [decoded, ...others];
+          storageManager.setItem('campushub_posts', combined);
+          return combined;
+        });
         showPost(decoded);
         return;
       }
@@ -841,10 +847,16 @@ export default function App() {
     // 3. Check directly in storageManager cache
     storageManager.getItem('campushub_posts').then(cached => {
       if (!isMounted) return;
-      if (Array.isArray(cached)) {
+      if (Array.isArray(cached) && cached.length > 0) {
         const cachedMatch = cached.find(p => String(p.id) === targetIdStr);
         if (cachedMatch) {
-          setPosts(prev => [cachedMatch, ...(prev || []).filter(p => String(p.id) !== String(cachedMatch.id))]);
+          setPosts(prev => {
+            const currentList = (prev && prev.length > 0) ? prev : cached;
+            const others = currentList.filter(p => String(p.id) !== String(cachedMatch.id));
+            const combined = [cachedMatch, ...others];
+            storageManager.setItem('campushub_posts', combined);
+            return combined;
+          });
           showPost(cachedMatch);
           return;
         }
@@ -872,7 +884,13 @@ export default function App() {
       // 5. Fetch from backend API
       api.getPost(targetIdStr).then(res => {
         if (isMounted && res && res.success && res.post) {
-          setPosts(prev => [res.post, ...(prev || []).filter(p => String(p.id) !== String(res.post.id))]);
+          setPosts(prev => {
+            const currentList = (prev && prev.length > 0) ? prev : (SEED_POSTS || []);
+            const others = currentList.filter(p => String(p.id) !== String(res.post.id));
+            const combined = [res.post, ...others];
+            storageManager.setItem('campushub_posts', combined);
+            return combined;
+          });
           showPost(res.post);
         }
       }).catch(() => {
@@ -2850,6 +2868,28 @@ export default function App() {
     setMobileOpen(false);
   }, []);
 
+  const handleCloseSharedPostModal = useCallback(() => {
+    setViewingSharedPost(null);
+    setHighlightPostId(null);
+    try {
+      const currentUrl = (window.location.pathname || '') + (window.location.search || '') + (window.location.hash || '');
+      if (currentUrl.includes('post') || currentUrl.includes('pdata')) {
+        window.history.pushState({ tab: 'all' }, '', '/');
+      }
+    } catch (_) {}
+
+    // Ensure all posts remain in feed when closing modal
+    setPosts(prev => {
+      if (!prev || prev.length <= 1) {
+        const full = SEED_POSTS || [];
+        storageManager.setItem('campushub_posts', full);
+        return full;
+      }
+      return prev;
+    });
+    setActiveTab('all');
+  }, []);
+
   /* ── Render Root Experience ── */
   return (
     <>
@@ -2869,12 +2909,7 @@ export default function App() {
       {/* Shared Post Direct View Modal - Global overlay */}
       {viewingSharedPost && (
         <ModalPortal>
-          <div className="modal-overlay" style={{ zIndex: 99999 }} onClick={() => {
-            setViewingSharedPost(null);
-            if (window.location.pathname.startsWith('/post/')) {
-              try { window.history.pushState({ tab: 'all' }, '', '/'); } catch (_) {}
-            }
-          }}>
+          <div className="modal-overlay" style={{ zIndex: 99999 }} onClick={handleCloseSharedPostModal}>
             <div
               className="glass-panel"
               style={{
@@ -2904,12 +2939,7 @@ export default function App() {
                 <button
                   type="button"
                   className="icon-btn"
-                  onClick={() => {
-                    setViewingSharedPost(null);
-                    if (window.location.pathname.startsWith('/post/')) {
-                      try { window.history.pushState({ tab: 'all' }, '', '/'); } catch (_) {}
-                    }
-                  }}
+                  onClick={handleCloseSharedPostModal}
                   title="Close"
                   style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
@@ -2923,12 +2953,12 @@ export default function App() {
                 onLike={handleLike}
                 onDelete={(id) => {
                   handleDeletePost(id);
-                  setViewingSharedPost(null);
+                  handleCloseSharedPostModal();
                 }}
                 onEdit={(p) => {
                   setEditingPost(p);
                   setShowNewPost(true);
-                  setViewingSharedPost(null);
+                  handleCloseSharedPostModal();
                 }}
                 onToggleComment={id => setOpenComment(p => p===id?null:id)}
                 commentOpen={openComment === viewingSharedPost.id}
@@ -2940,7 +2970,7 @@ export default function App() {
                 onToggleResolve={handleToggleResolve}
                 onClearIssue={(id) => {
                   handleClearIssue(id);
-                  setViewingSharedPost(null);
+                  handleCloseSharedPostModal();
                 }}
                 isAdmin={isAdmin}
                 isAuthenticated={isAuth}
