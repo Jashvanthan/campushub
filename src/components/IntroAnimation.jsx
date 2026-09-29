@@ -91,29 +91,10 @@ export default function IntroAnimation({ onComplete }) {
     <div className="intro-container v2-moon" role="dialog" aria-label="CampusHub Intro Animation">
       {/* Skip Intro Button */}
       <button
+        type="button"
         onClick={onComplete}
         className="skip-intro-btn"
         title="Skip Intro (Esc)"
-        style={{
-          position: 'fixed',
-          bottom: '2rem',
-          right: '2rem',
-          zIndex: 999999,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          background: 'rgba(15, 23, 42, 0.75)',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-          color: '#f8fafc',
-          padding: '0.6rem 1.2rem',
-          borderRadius: '9999px',
-          fontSize: '0.85rem',
-          fontWeight: 600,
-          backdropFilter: 'blur(12px)',
-          cursor: 'pointer',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-          transition: 'all 0.2s ease',
-        }}
       >
         <FastForward size={16} />
         <span>Skip Intro</span>
