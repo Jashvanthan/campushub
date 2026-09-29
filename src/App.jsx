@@ -1363,14 +1363,7 @@ export default function App() {
     const targetPost = (posts || []).find(p => p.id === id || String(p.id) === String(id));
     const matchingIdea = (ideas || []).find(i => (targetPost && i.title && targetPost.title && i.title.toLowerCase().trim() === targetPost.title.toLowerCase().trim()) || String(i.id) === String(id) || i.id === `idea-${id}`);
 
-    const isAlreadyLiked = targetPost && Array.isArray(targetPost.likedBy) && targetPost.likedBy.includes(u);
-    const isAlreadySupported = matchingIdea && (matchingIdea.supportedBy || []).includes(u);
-
-    // Strict Rule: If this is an idea post and user has already liked/supported it, prevent re-liking
-    if (targetPost && (targetPost.type === 'idea' || matchingIdea) && (isAlreadyLiked || isAlreadySupported)) {
-      setToast('✓ You have already liked this idea post.');
-      return;
-    }
+    const isCurrentlyLiked = targetPost && Array.isArray(targetPost.likedBy) && targetPost.likedBy.includes(u);
     
     // 1. Optimistically update local posts state
     setPosts(prev => {
@@ -1405,15 +1398,18 @@ export default function App() {
       return next;
     });
 
-    // Also sync matching idea support in state if idea post
-    if (matchingIdea && !isAlreadySupported) {
+    // Automatically update workspace idea container in real-time
+    if (matchingIdea) {
       setIdeas(prev => {
         const next = (prev || []).map(i => {
           if (i.id !== matchingIdea.id && String(i.id) !== String(matchingIdea.id)) return i;
+          const isSup = (i.supportedBy || []).includes(u);
+          const newSup = isSup ? (i.supportedBy || []).filter(x => x !== u) : [...(i.supportedBy || []), u];
+          const newCnt = Math.max(0, isSup ? ((i.supportCount || 1) - 1) : ((i.supportCount || 0) + 1));
           return {
             ...i,
-            supportedBy: [...(i.supportedBy || []), u],
-            supportCount: (i.supportCount || i.supportedBy?.length || 0) + 1
+            supportedBy: newSup,
+            supportCount: newCnt
           };
         });
         broadcast('SYNC_IDEAS', next);
@@ -1425,7 +1421,7 @@ export default function App() {
     // 2. Synchronize with database API
     try { 
       api.toggleLike(id).then((res) => {
-        if (res) {
+        if (res && res.success) {
           setPosts(prev => {
             const synced = prev.map(p => {
               if (p.id !== id && String(p.id) !== String(id)) return p;
@@ -1438,6 +1434,22 @@ export default function App() {
             storageManager.setItem('campushub_posts', synced);
             return synced;
           });
+
+          if (res.ideaId || matchingIdea) {
+            const targetIdeaId = res.ideaId || matchingIdea?.id;
+            setIdeas(prev => {
+              const synced = (prev || []).map(i => {
+                if (i.id !== targetIdeaId && String(i.id) !== String(targetIdeaId)) return i;
+                return {
+                  ...i,
+                  supportedBy: Array.isArray(res.ideaSupportedBy) ? res.ideaSupportedBy : i.supportedBy,
+                  supportCount: typeof res.ideaSupports === 'number' ? res.ideaSupports : i.supportCount
+                };
+              });
+              storageManager.setItem('campushub_ideas', synced);
+              return synced;
+            });
+          }
         }
       }).catch((err) => {
         console.warn('Backend like sync error:', err);
@@ -1790,27 +1802,23 @@ export default function App() {
     if (!session) return;
     const u = session.username;
 
-    // Strict Rule: Check if already supported on idea OR already liked on idea post
     const currentIdea = (ideas || []).find(i => i.id === ideaId || String(i.id) === String(ideaId));
     const matchingPost = (posts || []).find(p => (currentIdea && p.title && currentIdea.title && p.title.toLowerCase().trim() === currentIdea.title.toLowerCase().trim()) || String(p.id) === String(ideaId) || String(p.id) === String(ideaId).replace('idea-', ''));
 
-    const alreadySupported = currentIdea && (currentIdea.supportedBy || []).includes(u);
-    const alreadyLikedPost = matchingPost && Array.isArray(matchingPost.likedBy) && matchingPost.likedBy.includes(u);
+    const isCurrentlySupported = (currentIdea && (currentIdea.supportedBy || []).includes(u)) || (matchingPost && Array.isArray(matchingPost.likedBy) && matchingPost.likedBy.includes(u));
 
-    if (alreadySupported || alreadyLikedPost) {
-      setToast('✓ You have already liked this idea post.');
-      return;
-    }
-
-    // Optimistic UI update for first-time support
+    // 1. Optimistic UI update for Ideas
     setIdeas(prev => {
       const next = (prev || []).map(idea => {
         if (idea.id !== ideaId && String(idea.id) !== String(ideaId)) return idea;
-        if ((idea.supportedBy || []).includes(u)) return idea;
+        const supList = idea.supportedBy || [];
+        const isSup = supList.includes(u);
+        const newSupportedBy = isSup ? supList.filter(x => x !== u) : [...supList, u];
+        const newCount = Math.max(0, isSup ? ((idea.supportCount || supList.length || 1) - 1) : ((idea.supportCount || supList.length || 0) + 1));
 
-        const newSupportedBy = [...(idea.supportedBy || []), u];
-        const newCount = (idea.supportCount || idea.supportedBy?.length || 0) + 1;
-        broadcast('SYNC_IDEAS', null, `💡 ${u} supported your idea: ${idea.title}`);
+        if (!isSup) {
+          broadcast('SYNC_IDEAS', null, `💡 ${u} supported your idea: ${idea.title}`);
+        }
 
         return {
           ...idea,
@@ -1824,14 +1832,16 @@ export default function App() {
       return next;
     });
 
-    // Also sync like on matching post if exists
+    // 2. Optimistic UI update for Matching Post if exists
     if (matchingPost) {
       setPosts(prev => {
         const next = (prev || []).map(p => {
           if (p.id !== matchingPost.id && String(p.id) !== String(matchingPost.id)) return p;
           const lb = Array.isArray(p.likedBy) ? p.likedBy : [];
-          if (lb.includes(u)) return p;
-          return { ...p, likedBy: [...lb, u], likes: (p.likes || 0) + 1 };
+          const isLiked = lb.includes(u);
+          const newLb = isLiked ? lb.filter(x => x !== u) : [...lb, u];
+          const newLikes = Math.max(0, isLiked ? ((p.likes || 1) - 1) : ((p.likes || 0) + 1));
+          return { ...p, likedBy: newLb, likes: newLikes };
         });
         broadcast('SYNC_POSTS', next);
         storageManager.setItem('campushub_posts', next);
@@ -1839,25 +1849,42 @@ export default function App() {
       });
     }
 
-    setToast('✓ Thank you for supporting this idea!');
+    setToast(isCurrentlySupported ? 'Removed support from this idea.' : '✓ Thank you for supporting this idea!');
 
-    // Persist to Backend API Database
+    // 3. Persist to Backend API Database
     try {
       const res = await api.toggleSupport(ideaId);
-      if (res && res.supportedBy) {
+      if (res && res.success) {
         setIdeas(prev => {
           const next = (prev || []).map(idea => {
             if (idea.id !== ideaId && String(idea.id) !== String(ideaId)) return idea;
             return {
               ...idea,
-              supportedBy: res.supportedBy,
-              supportCount: res.supportCount !== undefined ? res.supportCount : res.supportedBy.length
+              supportedBy: Array.isArray(res.supportedBy) ? res.supportedBy : idea.supportedBy,
+              supportCount: typeof res.supportCount === 'number' ? res.supportCount : (res.supportedBy ? res.supportedBy.length : idea.supportCount)
             };
           });
           broadcast('SYNC_IDEAS', next);
           storageManager.setItem('campushub_ideas', next);
           return next;
         });
+
+        if (res.postId || matchingPost) {
+          const targetPostId = res.postId || matchingPost?.id;
+          setPosts(prev => {
+            const next = (prev || []).map(p => {
+              if (p.id !== targetPostId && String(p.id) !== String(targetPostId)) return p;
+              return {
+                ...p,
+                likes: typeof res.postLikes === 'number' ? res.postLikes : p.likes,
+                likedBy: Array.isArray(res.postLikedBy) ? res.postLikedBy : p.likedBy
+              };
+            });
+            broadcast('SYNC_POSTS', next);
+            storageManager.setItem('campushub_posts', next);
+            return next;
+          });
+        }
       }
     } catch (err) {
       console.warn('Failed to persist idea support toggle to database:', err);

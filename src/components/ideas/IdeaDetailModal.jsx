@@ -314,7 +314,7 @@ export default function IdeaDetailModal({
               className={`idea-metric-btn ${isSupported ? 'active-supported' : ''}`}
               onClick={() => onToggleSupport(idea.id)}
               style={{ padding: '0.5rem 1rem', borderRadius: '10px' }}
-              title={isSupported ? '✓ You have already supported this idea' : 'Support this idea'}
+              title={isSupported ? 'Remove support' : 'Support this idea'}
             >
               <ThumbsUp size={16} />
               <span>{idea.supportCount || (idea.supportedBy || []).length || 0} {isSupported ? 'Supported' : 'Support'}</span>

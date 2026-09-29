@@ -255,44 +255,19 @@ def toggle_like(current_user, post_id):
     if matching_idea:
         existing_idea_support = IdeaSupport.query.filter_by(idea_id=matching_idea.id, username=current_user.username).first()
 
-    # If this is an idea post and user has already liked/supported it: STRICT RULE -> Cannot relike
-    if post.type == 'idea' or matching_idea:
-        if existing_like or existing_idea_support:
-            if not existing_like:
-                db.session.add(PostLike(post_id=target_id, username=current_user.username))
-                db.session.commit()
-            if matching_idea and not existing_idea_support:
-                db.session.add(IdeaSupport(idea_id=matching_idea.id, username=current_user.username))
-                db.session.commit()
-
-            fresh_likes = PostLike.query.filter_by(post_id=target_id).all()
-            liked_users = [l.username for l in fresh_likes]
-            fresh_post = db.session.get(Post, target_id)
-            return jsonify({
-                'success': False,
-                'alreadyLiked': True,
-                'message': 'You have already liked this idea post and cannot like again.',
-                'liked': True,
-                'likes': len(liked_users),
-                'likedBy': liked_users,
-                'post': fresh_post.to_dict() if fresh_post else None
-            }), 200
-
-        # First time liking the idea post
+    # Bidirectional Toggle: If already liked or supported in workspace, dislike/remove both; otherwise add both
+    if existing_like or (matching_idea and existing_idea_support):
+        if existing_like:
+            db.session.delete(existing_like)
+        if matching_idea and existing_idea_support:
+            db.session.delete(existing_idea_support)
+        liked = False
+    else:
         new_like = PostLike(post_id=target_id, username=current_user.username)
         db.session.add(new_like)
         if matching_idea:
             db.session.add(IdeaSupport(idea_id=matching_idea.id, username=current_user.username))
         liked = True
-    else:
-        # Standard post toggle
-        if existing_like:
-            db.session.delete(existing_like)
-            liked = False
-        else:
-            new_like = PostLike(post_id=target_id, username=current_user.username)
-            db.session.add(new_like)
-            liked = True
 
     # Notify post author if not self
     if liked and post.author_id and post.author_id != current_user.username:
@@ -315,6 +290,10 @@ def toggle_like(current_user, post_id):
     # Direct fresh query to prevent stale relationship cache
     fresh_likes = PostLike.query.filter_by(post_id=target_id).all()
     liked_users = [l.username for l in fresh_likes]
+
+    fresh_idea_supports = []
+    if matching_idea:
+        fresh_idea_supports = [s.username for s in IdeaSupport.query.filter_by(idea_id=matching_idea.id).all()]
     
     # Reload post with fresh state
     fresh_post = db.session.get(Post, target_id)
@@ -324,7 +303,10 @@ def toggle_like(current_user, post_id):
         'liked': liked,
         'likes': len(liked_users),
         'likedBy': liked_users,
-        'post': fresh_post.to_dict() if fresh_post else None
+        'post': fresh_post.to_dict() if fresh_post else None,
+        'ideaId': matching_idea.id if matching_idea else None,
+        'ideaSupports': len(fresh_idea_supports),
+        'ideaSupportedBy': fresh_idea_supports
     }), 200
 
 

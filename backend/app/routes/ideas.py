@@ -238,42 +238,40 @@ def toggle_support(current_user, idea_id):
     if matching_post:
         existing_post_like = PostLike.query.filter_by(post_id=matching_post.id, username=current_user.username).first()
 
-    # STRICT RULE: If the user has already liked the idea post or supported the workspace, they CANNOT like again
+    # Synchronized Toggle: If already supported or liked, dislike/remove both; otherwise add both
     if existing_support or existing_post_like:
-        if not existing_support:
-            db.session.add(IdeaSupport(idea_id=target_idea_id, username=current_user.username))
-            db.session.commit()
-        if matching_post and not existing_post_like:
+        if existing_support:
+            db.session.delete(existing_support)
+        if existing_post_like:
+            db.session.delete(existing_post_like)
+        supported = False
+        message = 'Removed support from this idea.'
+    else:
+        db.session.add(IdeaSupport(idea_id=target_idea_id, username=current_user.username))
+        if matching_post:
             db.session.add(PostLike(post_id=matching_post.id, username=current_user.username))
-            db.session.commit()
-
-        fresh_supports = IdeaSupport.query.filter_by(idea_id=target_idea_id).all()
-        supported_users = [s.username for s in fresh_supports]
-        return jsonify({
-            'success': False,
-            'alreadyLiked': True,
-            'alreadySupported': True,
-            'message': 'You have already liked this idea post and cannot like again.',
-            'supported': True,
-            'supportCount': len(supported_users),
-            'supportedBy': supported_users
-        }), 200
-
-    # Record new support in IdeaSupport and PostLike
-    db.session.add(IdeaSupport(idea_id=target_idea_id, username=current_user.username))
-    if matching_post:
-        db.session.add(PostLike(post_id=matching_post.id, username=current_user.username))
+        supported = True
+        message = 'Thank you for supporting this idea!'
 
     db.session.commit()
+    db.session.expire_all()
+
     fresh_supports = IdeaSupport.query.filter_by(idea_id=target_idea_id).all()
     supported_users = [s.username for s in fresh_supports]
+
+    fresh_post_likes = []
+    if matching_post:
+        fresh_post_likes = [l.username for l in PostLike.query.filter_by(post_id=matching_post.id).all()]
+
     return jsonify({
         'success': True,
-        'message': 'Thank you for supporting this idea!',
-        'alreadySupported': False,
-        'supported': True,
+        'supported': supported,
+        'message': message,
         'supportCount': len(supported_users),
-        'supportedBy': supported_users
+        'supportedBy': supported_users,
+        'postId': matching_post.id if matching_post else None,
+        'postLikes': len(fresh_post_likes),
+        'postLikedBy': fresh_post_likes
     }), 200
 
 

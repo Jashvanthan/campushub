@@ -153,7 +153,7 @@ export default function IdeaCard({
             e.stopPropagation();
             onToggleSupport(idea.id);
           }}
-          title={isSupported ? '✓ You have already supported this idea' : 'Support this idea'}
+          title={isSupported ? 'Remove support' : 'Support this idea'}
         >
           <ThumbsUp size={15} />
           <span>{idea.supportCount || (idea.supportedBy || []).length || 0}</span>
