@@ -146,10 +146,15 @@ def create_post(current_user):
     }), 201
 
 
-@posts_bp.route('/<int:post_id>', methods=['PUT'])
+@posts_bp.route('/<post_id>', methods=['PUT'])
 @jwt_required()
 def update_post(current_user, post_id):
     post = db.session.get(Post, post_id)
+    if not post:
+        try:
+            post = db.session.get(Post, int(post_id))
+        except (ValueError, TypeError):
+            pass
     if not post:
         return jsonify({'success': False, 'message': 'Post not found'}), 404
 
@@ -182,6 +187,7 @@ def update_post(current_user, post_id):
     if 'visibility' in data: post.visibility = data['visibility']
 
     db.session.commit()
+    db.session.expire_all()
     return jsonify({
         'success': True,
         'message': 'Post updated successfully',
@@ -189,42 +195,55 @@ def update_post(current_user, post_id):
     }), 200
 
 
-@posts_bp.route('/<int:post_id>', methods=['DELETE'])
+@posts_bp.route('/<post_id>', methods=['DELETE'])
 @jwt_required()
 def delete_post(current_user, post_id):
     post = db.session.get(Post, post_id)
     if not post:
+        try:
+            post = db.session.get(Post, int(post_id))
+        except (ValueError, TypeError):
+            pass
+    if not post:
         return jsonify({'success': False, 'message': 'Post not found'}), 404
 
+    target_id = post.id
     if post.author_id != current_user.username and current_user.role != 'admin':
         return jsonify({'success': False, 'message': 'Unauthorized to delete this post'}), 403
 
     Notification.query.filter(
-        (Notification.target_id == str(post_id)) & (Notification.target_tab == 'explore')
+        (Notification.target_id == str(target_id)) & (Notification.target_tab == 'explore')
     ).delete(synchronize_session=False)
 
     db.session.delete(post)
     db.session.commit()
+    db.session.expire_all()
     return jsonify({
         'success': True,
         'message': 'Post deleted successfully',
-        'id': post_id
+        'id': target_id
     }), 200
 
 
-@posts_bp.route('/<int:post_id>/like', methods=['POST'])
+@posts_bp.route('/<post_id>/like', methods=['POST'])
 @jwt_required()
 def toggle_like(current_user, post_id):
     post = db.session.get(Post, post_id)
     if not post:
+        try:
+            post = db.session.get(Post, int(post_id))
+        except (ValueError, TypeError):
+            pass
+    if not post:
         return jsonify({'success': False, 'message': 'Post not found'}), 404
 
-    existing_like = PostLike.query.filter_by(post_id=post_id, username=current_user.username).first()
+    target_id = post.id
+    existing_like = PostLike.query.filter_by(post_id=target_id, username=current_user.username).first()
     if existing_like:
         db.session.delete(existing_like)
         liked = False
     else:
-        new_like = PostLike(post_id=post_id, username=current_user.username)
+        new_like = PostLike(post_id=target_id, username=current_user.username)
         db.session.add(new_like)
         liked = True
 
@@ -239,34 +258,49 @@ def toggle_like(current_user, post_id):
                 title='New Like on your post',
                 message=f"{current_user.name or current_user.username} liked your post \"{post.title}\"",
                 target_tab='explore',
-                target_id=str(post_id)
+                target_id=str(target_id)
             )
             db.session.add(notif)
 
     db.session.commit()
-    liked_users = [l.username for l in post.likes]
+    db.session.expire_all()
+
+    # Direct fresh query to prevent stale relationship cache
+    fresh_likes = PostLike.query.filter_by(post_id=target_id).all()
+    liked_users = [l.username for l in fresh_likes]
+    
+    # Reload post with fresh state
+    fresh_post = db.session.get(Post, target_id)
+
     return jsonify({
         'success': True,
         'liked': liked,
         'likes': len(liked_users),
-        'likedBy': liked_users
+        'likedBy': liked_users,
+        'post': fresh_post.to_dict() if fresh_post else None
     }), 200
 
 
-@posts_bp.route('/<int:post_id>/comments', methods=['POST'])
+@posts_bp.route('/<post_id>/comments', methods=['POST'])
 @jwt_required()
 def add_comment(current_user, post_id):
     post = db.session.get(Post, post_id)
     if not post:
+        try:
+            post = db.session.get(Post, int(post_id))
+        except (ValueError, TypeError):
+            pass
+    if not post:
         return jsonify({'success': False, 'message': 'Post not found'}), 404
 
+    target_id = post.id
     data = request.get_json() or {}
     text = data.get('text', '').strip()
     if not text:
         return jsonify({'success': False, 'message': 'Comment text cannot be empty'}), 400
 
     comment = PostComment(
-        post_id=post_id,
+        post_id=target_id,
         author=current_user.username,
         author_name=current_user.name or current_user.username,
         author_avatar=current_user.avatar or (current_user.name or current_user.username)[:2].upper(),
@@ -285,11 +319,12 @@ def add_comment(current_user, post_id):
             title='New Comment on your post',
             message=f"{current_user.name or current_user.username} commented: \"{text[:70]}\"",
             target_tab='explore',
-            target_id=str(post_id)
+            target_id=str(target_id)
         )
         db.session.add(notif)
 
     db.session.commit()
+    db.session.expire_all()
 
     return jsonify({
         'success': True,
@@ -298,10 +333,19 @@ def add_comment(current_user, post_id):
     }), 201
 
 
-@posts_bp.route('/<int:post_id>/comments/<int:comment_id>', methods=['DELETE'])
+@posts_bp.route('/<post_id>/comments/<int:comment_id>', methods=['DELETE'])
 @jwt_required()
 def delete_comment(current_user, post_id, comment_id):
-    comment = PostComment.query.filter_by(id=comment_id, post_id=post_id).first()
+    post = db.session.get(Post, post_id)
+    if not post:
+        try:
+            post = db.session.get(Post, int(post_id))
+        except (ValueError, TypeError):
+            pass
+    if not post:
+        return jsonify({'success': False, 'message': 'Post not found'}), 404
+
+    comment = PostComment.query.filter_by(id=comment_id, post_id=post.id).first()
     if not comment:
         return jsonify({'success': False, 'message': 'Comment not found'}), 404
 
@@ -317,16 +361,22 @@ def delete_comment(current_user, post_id, comment_id):
     }), 200
 
 
-@posts_bp.route('/<int:post_id>/register', methods=['POST'])
+@posts_bp.route('/<post_id>/register', methods=['POST'])
 @jwt_required()
 def register_for_event(current_user, post_id):
     post = db.session.get(Post, post_id)
+    if not post:
+        try:
+            post = db.session.get(Post, int(post_id))
+        except (ValueError, TypeError):
+            pass
     if not post or post.type != 'event':
         return jsonify({'success': False, 'message': 'Event not found'}), 404
 
+    target_id = post.id
     data = request.get_json() or {}
     
-    existing_reg = EventRegistration.query.filter_by(event_id=post_id, username=current_user.username).first()
+    existing_reg = EventRegistration.query.filter_by(event_id=target_id, username=current_user.username).first()
     if existing_reg:
         existing_reg.participant_type = data.get('participantType', existing_reg.participant_type)
         existing_reg.team_name = data.get('teamName', existing_reg.team_name)
@@ -335,7 +385,7 @@ def register_for_event(current_user, post_id):
         reg = existing_reg
     else:
         reg = EventRegistration(
-            event_id=post_id,
+            event_id=target_id,
             username=current_user.username,
             participant_type=data.get('participantType', 'single'),
             team_name=data.get('teamName'),

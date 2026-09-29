@@ -139,7 +139,7 @@ const SEED_POSTS = [
     author:{name:'Student One', avatar:'S1'}, department:'Computer Science',
     tags:['AI/ML','Computer Vision','Python'],
     image:'https://images.unsplash.com/photo-1555949963-aa79dcee57d5?auto=format&fit=crop&q=80&w=800',
-    likes:120, likedBy:[], comments:[{id:101,author:'admin',text:'Great architecture! Server integration looks solid.'},{id:102,author:'student1',text:'Thanks! The repository is linked.'}],
+    likes:2, likedBy:['admin', 'student1'], comments:[{id:101,author:'admin',text:'Great architecture! Server integration looks solid.'},{id:102,author:'student1',text:'Thanks! The repository is linked.'}],
     date:'2 hours ago', authorId:'student1',
   },
   {
@@ -148,7 +148,7 @@ const SEED_POSTS = [
     author:{name:'Campus Admin', avatar:'AD'}, location:'Main Auditorium & Virtual Hub', eventDate:'2026-04-15',
     tags:['Hackathon','Coding','Innovation'],
     image:'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=800',
-    likes:85, likedBy:[], comments:[{id:103,author:'student1',text:'Registered and excited!'}],
+    likes:1, likedBy:['student1'], comments:[{id:103,author:'student1',text:'Registered and excited!'}],
     date:'5 hours ago', authorId:'admin',
   },
   {
@@ -157,14 +157,14 @@ const SEED_POSTS = [
     author:{name:'Student One', avatar:'S1'}, status:'Under Review',
     tags:['IoT','Library','Hardware'],
     image:'https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&q=80&w=800',
-    likes:245, likedBy:[], comments:[], date:'1 day ago', authorId:'student1',
+    likes:0, likedBy:[], comments:[], date:'1 day ago', authorId:'student1',
   },
   {
     id:4, type:'issue', title:'Campus Wi-Fi Bandwidth Optimization in Engineering Wing',
     description:'Systems in Lab 2 are experiencing intermittent connectivity during peak hours. Network operations team is upgrading local access points.',
     author:{name:'Campus Admin', avatar:'AD'}, priority:'High',
     tags:['Network','Infrastructure','Urgent'], resolved:false,
-    likes:42, likedBy:[], comments:[{id:104,author:'student1',text:'Thanks for looking into this.'}],
+    likes:1, likedBy:['admin'], comments:[{id:104,author:'student1',text:'Thanks for looking into this.'}],
     date:'1 day ago', authorId:'admin',
   },
 ];
@@ -1154,28 +1154,33 @@ export default function App() {
       ? (activeTab !== 'all' && activeTab !== 'projects' && activeTab !== 'events' && activeTab !== 'profile' && activeTab !== 'search')
       : false;
 
-  // Load Personalized Recommendations for authenticated home feed
+  // Load database posts for all visitors, prioritizing personalized recommendations for authenticated users
   const fetchPersonalizedFeed = useCallback(async () => {
-    if (!session || !session.username || session.role === 'guest') return;
     try {
-      const res = await api.getRecommendedPosts(40);
+      const isAuthUser = session && session.username && session.role !== 'guest';
+      const res = isAuthUser
+        ? await api.getRecommendedPosts(50)
+        : await api.getPosts();
+
       if (res && res.success && Array.isArray(res.posts) && res.posts.length > 0) {
         setPosts(prev => {
-          const recIds = new Set(res.posts.map(p => p.id));
-          const localOnly = (prev || []).filter(p => !recIds.has(p.id) && (p.id > 1000000000000 || p.authorId === session.username));
-          return [...localOnly, ...res.posts];
+          const recIds = new Set(res.posts.map(p => String(p.id)));
+          const localOnly = (prev || []).filter(p => !recIds.has(String(p.id)) && Number(p.id) > 1000000000000);
+          const combined = [...localOnly, ...res.posts];
+          storageManager.setItem('campushub_posts', combined);
+          return combined;
         });
       }
     } catch (err) {
-      console.warn('Personalized recommendations fetch error, using cached feed:', err);
+      console.warn('Database posts fetch error, using cached feed:', err);
     }
   }, [session]);
 
   useEffect(() => {
-    if (session && !loading) {
+    if (!loading) {
       fetchPersonalizedFeed();
     }
-  }, [session, loading, fetchPersonalizedFeed]);
+  }, [loading, fetchPersonalizedFeed]);
 
   function timeAgo(dateString) {
     if (!dateString) return 'Just now';
@@ -1326,14 +1331,19 @@ export default function App() {
   function handleLike(id) {
     if (!session) return;
     const u = session.username;
+    
+    // 1. Optimistically update local posts state
     setPosts(prev => {
       const next = prev.map(p => {
-        if (p.id !== id) return p;
-        const lb = p.likedBy || [];
-        const liked = lb.includes(u);
-        if (!liked) {
+        if (p.id !== id && String(p.id) !== String(id)) return p;
+        const lb = Array.isArray(p.likedBy) ? p.likedBy : [];
+        const isLiked = lb.includes(u);
+        const newLb = isLiked ? lb.filter(x => x !== u) : [...lb, u];
+        const newCount = Math.max(0, isLiked ? ((p.likes || 1) - 1) : ((p.likes || 0) + 1));
+
+        if (!isLiked) {
           broadcast('SYNC_POSTS', null, `${u} liked your post: ${p.title}`);
-          const authorId = p.authorId || p.author;
+          const authorId = p.authorId || p.author?.name || p.author;
           if (authorId && authorId !== u) {
             addNotification({
               recipientId: authorId,
@@ -1348,16 +1358,33 @@ export default function App() {
             });
           }
         }
-        const newLb = liked ? lb.filter(x=>x!==u) : [...lb, u];
-        return { ...p, likedBy: newLb, likes: newLb.length };
+        return { ...p, likedBy: newLb, likes: newCount };
       });
       broadcast('SYNC_POSTS', next);
+      storageManager.setItem('campushub_posts', next);
       return next;
     });
+
+    // 2. Synchronize with database API
     try { 
-      api.toggleLike(id).then(() => {
-        fetchPersonalizedFeed();
-      }).catch(() => {}); 
+      api.toggleLike(id).then((res) => {
+        if (res && res.success) {
+          setPosts(prev => {
+            const synced = prev.map(p => {
+              if (p.id !== id && String(p.id) !== String(id)) return p;
+              return {
+                ...p,
+                likes: typeof res.likes === 'number' ? res.likes : (res.likedBy ? res.likedBy.length : p.likes),
+                likedBy: Array.isArray(res.likedBy) ? res.likedBy : p.likedBy
+              };
+            });
+            storageManager.setItem('campushub_posts', synced);
+            return synced;
+          });
+        }
+      }).catch((err) => {
+        console.warn('Backend like sync error:', err);
+      }); 
     } catch(e) {}
   }
 
@@ -4290,7 +4317,17 @@ export default function App() {
                 storageManager.setItem('campushub_posts', updated);
                 return updated;
               });
-              try { api.createPost(newPost).catch(() => {}); } catch(e) {}
+              try { 
+                api.createPost(newPost).then(res => {
+                  if (res && res.success && res.post) {
+                    setPosts(prev => {
+                      const synced = prev.map(p => p.id === newPost.id ? res.post : p);
+                      storageManager.setItem('campushub_posts', synced);
+                      return synced;
+                    });
+                  }
+                }).catch(() => {}); 
+              } catch(e) {}
             }
             setShowNewPost(false);
             setToast(`✓ Post "${newPost.title}" published successfully!`);
