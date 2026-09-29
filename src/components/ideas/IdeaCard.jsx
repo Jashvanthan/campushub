@@ -153,11 +153,11 @@ export default function IdeaCard({
             e.stopPropagation();
             onToggleSupport(idea.id);
           }}
-          title={isSupported ? 'You support this idea' : 'Support this idea'}
+          title={isSupported ? '✓ You have already supported this idea' : 'Support this idea'}
         >
           <ThumbsUp size={15} />
           <span>{idea.supportCount || (idea.supportedBy || []).length || 0}</span>
-          <span className="metric-text-label">Support</span>
+          <span className="metric-text-label">{isSupported ? 'Supported' : 'Support'}</span>
         </button>
 
         <div className="idea-metric-item" title="Discussion threads">

@@ -212,18 +212,27 @@ def toggle_support(current_user, idea_id):
 
     existing = IdeaSupport.query.filter_by(idea_id=idea_id, username=current_user.username).first()
     if existing:
-        db.session.delete(existing)
-        supported = False
-    else:
-        db.session.add(IdeaSupport(idea_id=idea_id, username=current_user.username))
-        supported = True
+        # Strict Rule: User has already supported this idea and cannot relike/duplicate
+        fresh_supports = IdeaSupport.query.filter_by(idea_id=idea_id).all()
+        supported_users = [s.username for s in fresh_supports]
+        return jsonify({
+            'success': True,
+            'message': 'You have already supported this idea.',
+            'alreadySupported': True,
+            'supported': True,
+            'supportCount': len(supported_users),
+            'supportedBy': supported_users
+        }), 200
 
+    db.session.add(IdeaSupport(idea_id=idea_id, username=current_user.username))
     db.session.commit()
     fresh_supports = IdeaSupport.query.filter_by(idea_id=idea_id).all()
     supported_users = [s.username for s in fresh_supports]
     return jsonify({
         'success': True,
-        'supported': supported,
+        'message': 'Thank you for supporting this idea!',
+        'alreadySupported': False,
+        'supported': True,
         'supportCount': len(supported_users),
         'supportedBy': supported_users
     }), 200

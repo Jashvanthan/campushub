@@ -1761,30 +1761,35 @@ export default function App() {
     if (!session) return;
     const u = session.username;
 
-    // Optimistic UI update
+    // Strict Rule: If already supported, prevent re-liking
+    const currentIdea = (ideas || []).find(i => i.id === ideaId || String(i.id) === String(ideaId));
+    if (currentIdea && (currentIdea.supportedBy || []).includes(u)) {
+      setToast('✓ You have already supported this idea.');
+      return;
+    }
+
+    // Optimistic UI update for first-time support
     setIdeas(prev => {
       const next = (prev || []).map(idea => {
-        if (idea.id !== ideaId) return idea;
-        const supported = (idea.supportedBy || []).includes(u);
-        const newSupportedBy = supported
-          ? (idea.supportedBy || []).filter(x => x !== u)
-          : [...(idea.supportedBy || []), u];
-        const newCount = (idea.supportCount || idea.supportedBy?.length || 0) + (supported ? -1 : 1);
+        if (idea.id !== ideaId && String(idea.id) !== String(ideaId)) return idea;
+        if ((idea.supportedBy || []).includes(u)) return idea;
 
-        if (!supported) {
-          broadcast('SYNC_IDEAS', null, `💡 ${u} supported your idea: ${idea.title}`);
-        }
+        const newSupportedBy = [...(idea.supportedBy || []), u];
+        const newCount = (idea.supportCount || idea.supportedBy?.length || 0) + 1;
+        broadcast('SYNC_IDEAS', null, `💡 ${u} supported your idea: ${idea.title}`);
 
         return {
           ...idea,
           supportedBy: newSupportedBy,
-          supportCount: Math.max(0, newCount)
+          supportCount: newCount
         };
       });
 
       broadcast('SYNC_IDEAS', next);
+      storageManager.setItem('campushub_ideas', next);
       return next;
     });
+    setToast('✓ Thank you for supporting this idea!');
 
     // Persist to Backend API Database
     try {
@@ -1792,7 +1797,7 @@ export default function App() {
       if (res && res.success && res.supportedBy) {
         setIdeas(prev => {
           const next = (prev || []).map(idea => {
-            if (idea.id !== ideaId) return idea;
+            if (idea.id !== ideaId && String(idea.id) !== String(ideaId)) return idea;
             return {
               ...idea,
               supportedBy: res.supportedBy,
@@ -1800,6 +1805,7 @@ export default function App() {
             };
           });
           broadcast('SYNC_IDEAS', next);
+          storageManager.setItem('campushub_ideas', next);
           return next;
         });
       }
