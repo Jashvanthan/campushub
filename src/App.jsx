@@ -126,7 +126,7 @@ export function renderAvatarContent(avatar, name, username, fallback = 'U') {
   const text = (avatar && typeof avatar === 'string' && avatar.length <= 4)
     ? avatar
     : ((name || username || fallback).slice(0, 2).toUpperCase());
-  return <span>{text}</span>;
+  return <span className="avatar-initials-text">{text}</span>;
 }
 
 /* ─────────────────────────────────────────────────

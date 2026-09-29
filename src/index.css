@@ -546,7 +546,7 @@ html, body {
 }
 
 [data-theme="light"] p,
-[data-theme="light"] span:not(.user-role-badge):not(.nav-brand):not(.status-badge):not(.idea-status-badge):not(.admin-role-badge):not(.hashed-badge),
+[data-theme="light"] span:not(.user-role-badge):not(.nav-brand):not(.status-badge):not(.idea-status-badge):not(.admin-role-badge):not(.hashed-badge):not(.avatar-initials-text):not(.user-profile-avatar-initials),
 [data-theme="light"] li,
 [data-theme="light"] label {
   color: #475569 !important;
@@ -11797,12 +11797,34 @@ select.form-control optgroup {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
   user-select: none;
   overflow: hidden;
   flex-shrink: 0;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
+}
+
+/* Global Avatar Text: MUST BE CRISP WHITE & HIGH CONTRAST */
+.avatar-initials-text,
+.user-profile-avatar-initials,
+.post-avatar span,
+.post-avatar div,
+.nav-user-avatar span,
+.feed-create-avatar span,
+.idea-avatar span,
+.user-profile-avatar span,
+.profile-preview-avatar span,
+.chat-avatar span,
+.avatar-placeholder span {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  letter-spacing: 0.04em !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35) !important;
 }
 
 /* Light mode unsetted profile photo / default avatar colors & contrast */
@@ -11814,8 +11836,21 @@ select.form-control optgroup {
   background: linear-gradient(135deg, #4f46e5 0%, #6366f1 45%, #7c3aed 100%) !important;
   color: #ffffff !important;
   border: 2px solid #ffffff !important;
-  box-shadow: 0 0 0 1.5px rgba(79, 70, 229, 0.28), 0 2px 8px rgba(79, 70, 229, 0.18) !important;
+  box-shadow: 0 0 0 1.5px rgba(79, 70, 229, 0.35), 0 2px 8px rgba(79, 70, 229, 0.22) !important;
   font-weight: 800 !important;
+}
+
+[data-theme="light"] .post-avatar span,
+[data-theme="light"] .idea-avatar span,
+[data-theme="light"] .feed-create-avatar span,
+[data-theme="light"] .avatar-badge span,
+[data-theme="light"] .avatar-placeholder span,
+[data-theme="light"] .avatar-initials-text,
+[data-theme="light"] .user-profile-avatar-initials {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35) !important;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
 /* Navbar specific user profile icon on Light Mode */
@@ -11833,7 +11868,12 @@ select.form-control optgroup {
   font-weight: 800 !important;
   font-size: 0.86rem !important;
   border: 2px solid #ffffff !important;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.35), 0 3px 10px rgba(79, 70, 229, 0.2) !important;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.4), 0 3px 10px rgba(79, 70, 229, 0.25) !important;
+}
+
+[data-theme="light"] .nav-user-avatar span {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
 [data-theme="light"] .nav-user-avatar:hover {
@@ -11856,11 +11896,22 @@ select.form-control optgroup {
   font-weight: 700 !important;
 }
 
+[data-theme="light"] .comment .post-avatar span {
+  color: #4338ca !important;
+  -webkit-text-fill-color: #4338ca !important;
+  text-shadow: none !important;
+}
+
 [data-theme="light"] .user-profile-avatar {
   background: linear-gradient(135deg, #4338ca 0%, #6366f1 45%, #8b5cf6 100%) !important;
   color: #ffffff !important;
   border: 4px solid #ffffff !important;
   box-shadow: 0 0 0 2.5px rgba(99, 102, 241, 0.3), 0 10px 30px rgba(79, 70, 229, 0.22) !important;
+}
+
+[data-theme="light"] .user-profile-avatar span {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
 [data-theme="light"] .profile-preview-avatar {
@@ -11870,10 +11921,9 @@ select.form-control optgroup {
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.35), 0 6px 20px rgba(79, 70, 229, 0.2) !important;
 }
 
-[data-theme="light"] .user-profile-avatar-initials {
+[data-theme="light"] .profile-preview-avatar span {
   color: #ffffff !important;
-  font-weight: 800 !important;
-  letter-spacing: 0.04em !important;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
 /* ─────────────────────────────────────────────────
