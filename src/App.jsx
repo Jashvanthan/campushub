@@ -1174,13 +1174,8 @@ export default function App() {
         : await api.getPosts();
 
       if (res && res.success && Array.isArray(res.posts) && res.posts.length > 0) {
-        setPosts(prev => {
-          const recIds = new Set(res.posts.map(p => String(p.id)));
-          const localOnly = (prev || []).filter(p => !recIds.has(String(p.id)) && Number(p.id) > 1000000000000);
-          const combined = [...localOnly, ...res.posts];
-          storageManager.setItem('campushub_posts', combined);
-          return combined;
-        });
+        setPosts(res.posts);
+        storageManager.setItem('campushub_posts', res.posts);
       }
     } catch (err) {
       console.warn('Database posts fetch error, using cached feed:', err);
@@ -2417,10 +2412,13 @@ export default function App() {
     setPublishing(true);
 
     const buildPost = (imageUrl) => {
+      const desc = fd.get('description') || fd.get('explanation') || '';
       const base = {
-        id: Date.now(), type: postType,
+        id: Date.now(),
+        type: postType,
         title: fd.get('title'),
-        description: fd.get('description') || fd.get('explanation'),
+        description: desc,
+        content: desc,
         tags: fd.get('tags') ? fd.get('tags').split(',').map(t=>t.trim()).filter(Boolean) : [fd.get('category')],
         image: imageUrl || fd.get('imageLink') || 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&q=80&w=800',
         author: { name: session.username, avatar: session.username.slice(0,2).toUpperCase() },
@@ -2431,11 +2429,22 @@ export default function App() {
       if (postType==='issue') Object.assign(base, { priority:fd.get('priority'), resolved:false });
       if (postType==='event') Object.assign(base, { organization:fd.get('organization'), location:fd.get('venue'), eventDate:fd.get('eventDate'), eventTime:fd.get('eventTime'), duration:fd.get('duration'), category:fd.get('category'), participantType:fd.get('participantType'), minTeamSize:fd.get('minTeamSize'), maxTeamSize:fd.get('maxTeamSize'), contactInfo:fd.get('contactInfo'), organizerName:fd.get('organizerName') });
       setPosts(prev => {
-        const next = [base, ...prev];
+        const next = [base, ...(prev || [])];
         broadcast('SYNC_POSTS', next);
+        storageManager.setItem('campushub_posts', next);
         return next;
       });
-      try { api.createPost(base).catch(() => {}); } catch(e) {}
+      try { 
+        api.createPost(base).then(res => {
+          if (res && res.success && res.post) {
+            setPosts(prev => {
+              const updated = (prev || []).map(p => (p.id === base.id || String(p.id) === String(base.id)) ? { ...p, ...res.post } : p);
+              storageManager.setItem('campushub_posts', updated);
+              return updated;
+            });
+          }
+        }).catch(err => console.warn('API createPost notice:', err)); 
+      } catch(e) {}
       setShowNewPost(false);
       setPublishing(false);
       e.target.reset();

@@ -11736,7 +11736,49 @@ select.form-control optgroup {
   }
 }
 
+/* ─── Profile Settings Grid & Mobile Alignment ─── */
+.profile-settings-grid {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 2.25rem;
+  align-items: flex-start;
+  width: 100%;
+}
 
+.profile-avatar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0.5rem;
+}
 
+@media (max-width: 768px) {
+  .profile-settings-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+    justify-items: center;
+  }
+  
+  .profile-avatar-container {
+    width: 100%;
+    margin-bottom: 0.5rem;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .profile-settings-grid > div:last-child {
+    width: 100%;
+  }
 
+  .profile-settings-grid .form-control {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .profile-settings-grid button[type="submit"],
+  .profile-settings-grid button[type="button"] {
+    min-height: 44px;
+  }
+}
 

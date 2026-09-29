@@ -12,7 +12,7 @@ export default function SubmitIdeaModal({ user, onSubmit, onClose }) {
     problem: '',
     solution: '',
     impact: '',
-    category: CATEGORIES[0],
+    category: CATEGORIES[0] || 'Technology',
     duration: '1–3 Months',
     teamSize: '4–6',
     autoCreateWorkspace: true
@@ -38,10 +38,11 @@ export default function SubmitIdeaModal({ user, onSubmit, onClose }) {
   };
 
   const addCustomSkill = (e) => {
-    e.preventDefault();
-    if (!customSkill.trim()) return;
-    if (!selectedSkills.includes(customSkill.trim())) {
-      setSelectedSkills(prev => [...prev, customSkill.trim()]);
+    if (e && e.preventDefault) e.preventDefault();
+    const val = customSkill.trim();
+    if (!val) return;
+    if (!selectedSkills.includes(val)) {
+      setSelectedSkills(prev => [...prev, val]);
     }
     setCustomSkill('');
   };
@@ -54,17 +55,18 @@ export default function SubmitIdeaModal({ user, onSubmit, onClose }) {
   };
 
   const addCustomRole = (e) => {
-    e.preventDefault();
-    if (!customRole.trim()) return;
-    if (!selectedRoles.includes(customRole.trim())) {
-      setSelectedRoles(prev => [...prev, customRole.trim()]);
+    if (e && e.preventDefault) e.preventDefault();
+    const val = customRole.trim();
+    if (!val) return;
+    if (!selectedRoles.includes(val)) {
+      setSelectedRoles(prev => [...prev, val]);
     }
     setCustomRole('');
   };
 
   // Handle tags
   const addTag = (e) => {
-    if (e.key === 'Enter' || e.key === ',') {
+    if (e && (e.key === 'Enter' || e.key === ',')) {
       e.preventDefault();
       const val = tagInput.trim().replace(/^#/, '');
       if (val && !tags.includes(val)) {
@@ -74,13 +76,22 @@ export default function SubmitIdeaModal({ user, onSubmit, onClose }) {
     }
   };
 
+  const handleAddTagClick = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const val = tagInput.trim().replace(/^#/, '');
+    if (val && !tags.includes(val)) {
+      setTags(prev => [...prev, val]);
+    }
+    setTagInput('');
+  };
+
   const removeTag = (t) => {
     setTags(prev => prev.filter(item => item !== t));
   };
 
-  // Handle file uploads
+  // Handle file uploads (Safe base64 data URLs for all files)
   const handleFileUpload = (e) => {
-    const files = Array.from(e.target.files);
+    const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
     files.forEach(file => {
@@ -93,17 +104,13 @@ export default function SubmitIdeaModal({ user, onSubmit, onClose }) {
             id: `att-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
             name: file.name,
             size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
-            type: file.type,
+            type: file.type || (isImg ? 'image/png' : 'application/octet-stream'),
             url: reader.result,
             isImage: isImg
           }
         ]);
       };
-      if (isImg) {
-        reader.readAsDataURL(file);
-      } else {
-        reader.readAsArrayBuffer(file);
-      }
+      reader.readAsDataURL(file);
     });
   };
 
@@ -132,14 +139,37 @@ export default function SubmitIdeaModal({ user, onSubmit, onClose }) {
       setError('Please describe the expected impact.');
       return;
     }
-    if (selectedSkills.length === 0) {
+
+    // Capture any pending inputs in custom fields
+    const finalSkills = [...selectedSkills];
+    if (customSkill.trim() && !finalSkills.includes(customSkill.trim())) {
+      finalSkills.push(customSkill.trim());
+    }
+
+    const finalRoles = [...selectedRoles];
+    if (customRole.trim() && !finalRoles.includes(customRole.trim())) {
+      finalRoles.push(customRole.trim());
+    }
+
+    const finalTags = [...tags];
+    const pendingTag = tagInput.trim().replace(/^#/, '');
+    if (pendingTag && !finalTags.includes(pendingTag)) {
+      finalTags.push(pendingTag);
+    }
+
+    if (finalSkills.length === 0) {
       setError('Please select at least one required skill.');
       return;
     }
-    if (selectedRoles.length === 0) {
+    if (finalRoles.length === 0) {
       setError('Please select at least one contribution role needed.');
       return;
     }
+
+    const currentUsername = user?.username || 'student1';
+    const currentName = user?.name || user?.username || currentUsername;
+    const currentAvatar = user?.avatar || currentUsername.slice(0, 2).toUpperCase();
+    const currentDept = user?.department || 'Campus Community';
 
     const newIdeaId = `idea-${Date.now()}`;
     const newWorkspaceId = formData.autoCreateWorkspace ? `ws-${Date.now()}` : null;
@@ -152,18 +182,18 @@ export default function SubmitIdeaModal({ user, onSubmit, onClose }) {
       impact: formData.impact.trim(),
       category: formData.category,
       status: 'OPEN FOR CONTRIBUTION',
-      tags: tags.length ? tags : ['Innovation'],
-      skillsRequired: selectedSkills,
-      contributionTypes: selectedRoles,
+      tags: finalTags.length ? finalTags : ['Innovation'],
+      skillsRequired: finalSkills,
+      contributionTypes: finalRoles,
       duration: formData.duration,
       teamSize: formData.teamSize,
-      creatorId: user.username,
-      creatorName: user.name || user.username,
-      creatorAvatar: user.avatar || user.username.slice(0, 2).toUpperCase(),
-      creatorDepartment: user.department || 'Campus Community',
-      supportedBy: [user.username],
+      creatorId: currentUsername,
+      creatorName: currentName,
+      creatorAvatar: currentAvatar,
+      creatorDepartment: currentDept,
+      supportedBy: [currentUsername],
       supportCount: 1,
-      followedBy: [user.username],
+      followedBy: [currentUsername],
       progress: 0,
       workspaceId: newWorkspaceId,
       attachments: attachments,
@@ -181,17 +211,17 @@ export default function SubmitIdeaModal({ user, onSubmit, onClose }) {
         category: formData.category,
         status: 'OPEN FOR CONTRIBUTION',
         progress: 0,
-        ownerId: user.username,
-        ownerName: user.name || user.username,
+        ownerId: currentUsername,
+        ownerName: currentName,
         createdAt: new Date().toISOString(),
         members: [
           {
-            userId: user.username,
-            name: user.name || user.username,
-            avatar: user.avatar || user.username.slice(0, 2).toUpperCase(),
+            userId: currentUsername,
+            name: currentName,
+            avatar: currentAvatar,
             role: 'Owner',
             contributionRole: 'Idea Creator & Project Lead',
-            department: user.department || 'Campus Community',
+            department: currentDept,
             joinedAt: new Date().toISOString(),
             tasksCompleted: 0,
             totalAssigned: 0
@@ -392,7 +422,7 @@ export default function SubmitIdeaModal({ user, onSubmit, onClose }) {
 
           {/* Tags */}
           <div className="form-group">
-            <label className="form-label">Tags (Press Enter to add)</label>
+            <label className="form-label">Tags (Type &amp; press Enter or click Add)</label>
             <div className="tags-input-wrapper">
               <div className="selected-tags-chips">
                 {tags.map(t => (
@@ -402,14 +432,22 @@ export default function SubmitIdeaModal({ user, onSubmit, onClose }) {
                   </span>
                 ))}
               </div>
-              <input
-                type="text"
-                className="tags-sub-input"
-                placeholder="Type tag (e.g., AI, Robotics, React) & press Enter..."
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={addTag}
-              />
+              <div style={{ display: 'flex', gap: '0.5rem', width: '100%', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  className="tags-sub-input"
+                  style={{ flex: 1 }}
+                  placeholder="Type tag (e.g. AI, Robotics) & press Enter..."
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={addTag}
+                />
+                {tagInput.trim() && (
+                  <button type="button" className="secondary-btn" style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }} onClick={handleAddTagClick}>
+                    Add Tag
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

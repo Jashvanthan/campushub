@@ -9,6 +9,7 @@ import ideasRoutes from './routes/ideas.js';
 import workspacesRoutes from './routes/workspaces.js';
 import chatRoutes from './routes/chat.js';
 import terminalRoutes from './routes/terminal.js';
+import searchRoutes from './routes/search.js';
 import { setupWebSocketServer } from './websocket.js';
 import { db } from './db/database.js';
 
@@ -56,6 +57,7 @@ app.use('/api/ideas', ideasRoutes);
 app.use('/api/workspaces', workspacesRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/terminal', terminalRoutes);
+app.use('/api/search', searchRoutes);
 
 // Serve static build in production
 const distPath = path.join(__dirname, '..', 'dist');
