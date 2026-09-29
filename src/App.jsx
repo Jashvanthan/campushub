@@ -139,7 +139,7 @@ const SEED_POSTS = [
     author:{name:'Student One', avatar:'S1'}, department:'Computer Science',
     tags:['AI/ML','Computer Vision','Python'],
     image:'https://images.unsplash.com/photo-1555949963-aa79dcee57d5?auto=format&fit=crop&q=80&w=800',
-    likes:2, likedBy:['admin', 'student1'], comments:[{id:101,author:'admin',text:'Great architecture! Server integration looks solid.'},{id:102,author:'student1',text:'Thanks! The repository is linked.'}],
+    likes:0, likedBy:[], comments:[{id:101,author:'admin',text:'Great architecture! Server integration looks solid.'},{id:102,author:'student1',text:'Thanks! The repository is linked.'}],
     date:'2 hours ago', authorId:'student1',
   },
   {
@@ -148,7 +148,7 @@ const SEED_POSTS = [
     author:{name:'Campus Admin', avatar:'AD'}, location:'Main Auditorium & Virtual Hub', eventDate:'2026-04-15',
     tags:['Hackathon','Coding','Innovation'],
     image:'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=800',
-    likes:1, likedBy:['student1'], comments:[{id:103,author:'student1',text:'Registered and excited!'}],
+    likes:0, likedBy:[], comments:[{id:103,author:'student1',text:'Registered and excited!'}],
     date:'5 hours ago', authorId:'admin',
   },
   {
@@ -164,7 +164,7 @@ const SEED_POSTS = [
     description:'Systems in Lab 2 are experiencing intermittent connectivity during peak hours. Network operations team is upgrading local access points.',
     author:{name:'Campus Admin', avatar:'AD'}, priority:'High',
     tags:['Network','Infrastructure','Urgent'], resolved:false,
-    likes:1, likedBy:['admin'], comments:[{id:104,author:'student1',text:'Thanks for looking into this.'}],
+    likes:0, likedBy:[], comments:[{id:104,author:'student1',text:'Thanks for looking into this.'}],
     date:'1 day ago', authorId:'admin',
   },
 ];
@@ -908,7 +908,7 @@ export default function App() {
         const studentHash  = await hashPassword('Student@2025!');
         let storedUsers = await storageManager.getItem('campushub_users');
 
-        const isV5 = (await storageManager.getItem('campushub_sec_version')) === 'v5';
+        const isV6 = (await storageManager.getItem('campushub_sec_version')) === 'v6';
 
         if (storedUsers) {
           // Migrate plain passwords → hashed
@@ -919,7 +919,7 @@ export default function App() {
               dirty = true;
             }
           }
-          if (!isV5) {
+          if (!isV6) {
             storedUsers.admin = { ...(storedUsers.admin || {}), password: adminHash, role: 'admin', name: 'Campus Admin', avatar: 'AD' };
             storedUsers.student1 = { ...(storedUsers.student1 || {}), password: studentHash, role: 'student', name: 'Student One', avatar: 'S1' };
             storedUsers.std1 = { ...(storedUsers.std1 || {}), password: studentHash, role: 'student', name: 'Student One', avatar: 'S1' };
@@ -955,8 +955,8 @@ export default function App() {
           }
         }
 
-        // Load and sanitize Posts
-        const savedPosts = isV5 ? await storageManager.getItem('campushub_posts') : null;
+        // Load and sanitize Posts (initialized with 0 likes)
+        const savedPosts = isV6 ? await storageManager.getItem('campushub_posts') : null;
         let activePosts = SEED_POSTS;
         if (savedPosts && Array.isArray(savedPosts)) {
           activePosts = savedPosts.map(p => {
@@ -976,7 +976,7 @@ export default function App() {
         setRegs(savedRegs || {});
 
         // Load and sanitize Ideas
-        const rawIdeas = isV5 ? await storageManager.getItem('campushub_ideas') : null;
+        const rawIdeas = isV6 ? await storageManager.getItem('campushub_ideas') : null;
         let activeIdeas = SEED_IDEAS;
         if (rawIdeas && Array.isArray(rawIdeas) && rawIdeas.length > 0) {
           activeIdeas = rawIdeas.filter(i => 
@@ -998,7 +998,7 @@ export default function App() {
         const activeIdeaIds = new Set(activeIdeas.map(i => i.id));
 
         // Load and sanitize Workspaces
-        const rawWorkspaces = isV5 ? await storageManager.getItem('campushub_workspaces') : null;
+        const rawWorkspaces = isV6 ? await storageManager.getItem('campushub_workspaces') : null;
         let cleanWorkspaces = SEED_WORKSPACES;
         if (rawWorkspaces && Array.isArray(rawWorkspaces) && rawWorkspaces.length > 0) {
           cleanWorkspaces = rawWorkspaces.filter(ws => ws.status !== 'CLOSED' && ws.ideaId && activeIdeaIds.has(ws.ideaId));
@@ -1010,37 +1010,37 @@ export default function App() {
         const validWsIds = new Set(cleanWorkspaces.map(w => w.id));
 
         // Tasks
-        const rawTasks = isV5 ? await storageManager.getItem('campushub_tasks') : null;
+        const rawTasks = isV6 ? await storageManager.getItem('campushub_tasks') : null;
         const cleanTasks = ((rawTasks && Array.isArray(rawTasks)) ? rawTasks : SEED_TASKS).filter(t => validWsIds.has(t.workspaceId));
         setTasks(cleanTasks);
         storageManager.setItem('campushub_tasks', cleanTasks);
 
         // Milestones
-        const rawMilestones = isV5 ? await storageManager.getItem('campushub_milestones') : null;
+        const rawMilestones = isV6 ? await storageManager.getItem('campushub_milestones') : null;
         const cleanMilestones = ((rawMilestones && Array.isArray(rawMilestones)) ? rawMilestones : SEED_MILESTONES).filter(m => validWsIds.has(m.workspaceId));
         setMilestones(cleanMilestones);
         storageManager.setItem('campushub_milestones', cleanMilestones);
 
         // Discussions
-        const rawDiscussions = isV5 ? await storageManager.getItem('campushub_discussions') : null;
+        const rawDiscussions = isV6 ? await storageManager.getItem('campushub_discussions') : null;
         const cleanDiscussions = ((rawDiscussions && Array.isArray(rawDiscussions)) ? rawDiscussions : SEED_DISCUSSIONS).filter(d => validWsIds.has(d.workspaceId));
         setDiscussions(cleanDiscussions);
         storageManager.setItem('campushub_discussions', cleanDiscussions);
 
         // Files
-        const rawFiles = isV5 ? await storageManager.getItem('campushub_files') : null;
+        const rawFiles = isV6 ? await storageManager.getItem('campushub_files') : null;
         const cleanFiles = ((rawFiles && Array.isArray(rawFiles)) ? rawFiles : SEED_FILES).filter(f => validWsIds.has(f.workspaceId));
         setFiles(cleanFiles);
         storageManager.setItem('campushub_files', cleanFiles);
 
         // Activities
-        const rawActivities = isV5 ? await storageManager.getItem('campushub_activities') : null;
+        const rawActivities = isV6 ? await storageManager.getItem('campushub_activities') : null;
         const cleanActivities = ((rawActivities && Array.isArray(rawActivities)) ? rawActivities : SEED_ACTIVITIES).filter(a => validWsIds.has(a.workspaceId));
         setActivities(cleanActivities);
         storageManager.setItem('campushub_activities', cleanActivities);
 
         // Contribution Requests
-        const rawReqs = isV5 ? await storageManager.getItem('campushub_contribution_requests') : null;
+        const rawReqs = isV6 ? await storageManager.getItem('campushub_contribution_requests') : null;
         const activePostIds = new Set(activePosts.map(p => p.id));
         const cleanReqs = ((rawReqs && Array.isArray(rawReqs)) ? rawReqs : SEED_CONTRIBUTION_REQUESTS).filter(r => {
           if (r.ideaId && !activeIdeaIds.has(r.ideaId)) return false;
@@ -1051,13 +1051,13 @@ export default function App() {
         storageManager.setItem('campushub_contribution_requests', cleanReqs);
 
         // Chat
-        const rawChat = isV5 ? await storageManager.getItem('campushub_chat_messages') : null;
+        const rawChat = isV6 ? await storageManager.getItem('campushub_chat_messages') : null;
         const cleanChat = ((rawChat && Array.isArray(rawChat)) ? rawChat : SEED_CHAT_MESSAGES).filter(c => validWsIds.has(c.workspaceId));
         setChatMessages(cleanChat);
         storageManager.setItem('campushub_chat_messages', cleanChat);
 
-        // Set version marker v5
-        await storageManager.setItem('campushub_sec_version', 'v5');
+        // Set version marker v6
+        await storageManager.setItem('campushub_sec_version', 'v6');
 
         const savedNotifs = await storageManager.getItem('campushub_notifications');
         setNotifications(savedNotifs && Array.isArray(savedNotifs) ? savedNotifs : SEED_NOTIFICATIONS);

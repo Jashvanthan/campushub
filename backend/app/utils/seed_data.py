@@ -144,16 +144,11 @@ def seed_database():
                 db.session.add_all([p1, p2, p3, p4])
                 db.session.commit()
 
-                # Seed Comments & Likes
+                # Seed Comments
                 c1 = PostComment(post_id=1, author='admin', author_name='Campus Admin', text='Excellent architecture! Let us coordinate on server deployment.')
                 c2 = PostComment(post_id=1, author='student1', author_name='Student One', text='Thanks! The prototype repository will be linked in the workspace.')
                 c3 = PostComment(post_id=4, author='student1', author_name='Student One', text='Confirmed improved speeds near Lab 204.')
                 db.session.add_all([c1, c2, c3])
-
-                l1 = PostLike(post_id=1, username='admin')
-                l2 = PostLike(post_id=1, username='student1')
-                l3 = PostLike(post_id=2, username='student1')
-                db.session.add_all([l1, l2, l3])
                 db.session.commit()
         except Exception:
             db.session.rollback()
