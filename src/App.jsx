@@ -3228,11 +3228,10 @@ export default function App() {
                 </button>
               )}
               <div className="user-nav-block">
-                <div className="post-avatar"
-                  style={{ border: isAdmin?'2px solid #a78bfa': isStudent?'2px solid var(--accent-primary)':'2px solid #94a3b8', cursor:'pointer', overflow:'hidden' }}
+                <div className={`post-avatar nav-user-avatar ${isAdmin ? 'role-admin' : isStudent ? 'role-student' : 'role-guest'}`}
                   onClick={() => { isAdmin ? navTo('admin') : (isGuest ? null : handleOpenMyProfile()); setMobileOpen(false); }}
-                  title={`View ${session.username}'s Profile`}>
-                  {renderAvatarContent(session.avatar, session.name, session.username, isAdmin ? 'AD' : isGuest ? 'GU' : 'ST')}
+                  title={`View ${session.name || session.username}'s Profile`}>
+                  {renderAvatarContent(session.avatar, session.name, session.username, (session.name || session.username || (isAdmin ? 'AD' : isGuest ? 'GU' : 'ST')).slice(0, 2).toUpperCase())}
                 </div>
                 <div 
                   className="user-nav-info" 
@@ -3545,10 +3544,10 @@ export default function App() {
                     <form onSubmit={handleStudentProfile}>
                       <div className="responsive-grid profile-settings-grid">
                         <div className="profile-avatar-container">
-                          <div className="post-avatar" style={{ width:'110px', height:'110px', fontSize:'2.2rem', border:'3px solid var(--accent-primary)', marginBottom:'1rem', overflow:'hidden', transition:'transform 0.3s' }}
+                          <div className="post-avatar profile-preview-avatar" style={{ width:'110px', height:'110px', fontSize:'2.2rem', marginBottom:'1rem', overflow:'hidden', transition:'transform 0.3s' }}
                             onMouseEnter={e=>e.currentTarget.style.transform='scale(1.05)'}
                             onMouseLeave={e=>e.currentTarget.style.transform=''}>
-                            {renderAvatarContent(avatarPreview || session.avatar, session.name, session.username, session.username.slice(0, 2).toUpperCase())}
+                            {renderAvatarContent(avatarPreview || session.avatar, session.name, session.username, (session.name || session.username || 'U').slice(0, 2).toUpperCase())}
                           </div>
                           <div className="file-upload-wrapper" style={{ marginTop:'0.75rem' }}>
                             <label className="file-upload-label" style={{ padding:'0.5rem 0.9rem', fontSize:'0.82rem' }}>
