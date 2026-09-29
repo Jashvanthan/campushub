@@ -17,15 +17,21 @@ import {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DATA_DIR = path.join(__dirname, '..', 'data');
+const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const DATA_DIR = isVercel ? '/tmp/campushub_data' : path.join(__dirname, '..', 'data');
 const DB_FILE = path.join(DATA_DIR, 'campushub.db.json');
 
 // Ensure data directory exists
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+try {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+} catch (e) {
+  console.warn('Database directory creation notice:', e.message);
 }
 
 // In-memory relational store with auto-persistence
+
 class CampusHubDatabase {
   constructor() {
     this.data = {

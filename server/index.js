@@ -61,9 +61,11 @@ app.use('/api/terminal', terminalRoutes);
 const distPath = path.join(__dirname, '..', 'dist');
 app.use(express.static(distPath));
 
-app.get('*', (req, res, next) => {
-  if (req.url.startsWith('/api') || req.url.startsWith('/ws')) return next();
-  res.sendFile(path.join(distPath, 'index.html'));
+app.use((req, res, next) => {
+  if (req.method === 'GET' && !req.url.startsWith('/api') && !req.url.startsWith('/ws')) {
+    return res.sendFile(path.join(distPath, 'index.html'));
+  }
+  next();
 });
 
 // Error handling middleware
@@ -76,13 +78,19 @@ app.use((err, req, res, next) => {
 const server = http.createServer(app);
 setupWebSocketServer(server);
 
-server.listen(PORT, () => {
-  console.log(`
-  🚀 =======================================================
-  🌌 CampusHub Backend & Database Server running!
-  📡 HTTP API:      http://localhost:${PORT}/api/health
-  ⚡ WebSocket:     ws://localhost:${PORT}/ws
-  🗄️  Database:      JSON Relational Store (ACID persistent)
-  =======================================================
-  `);
-});
+if (!process.env.VERCEL) {
+  server.listen(PORT, () => {
+    console.log(`
+    🚀 =======================================================
+    🌌 CampusHub Backend & Database Server running!
+    📡 HTTP API:      http://localhost:${PORT}/api/health
+    ⚡ WebSocket:     ws://localhost:${PORT}/ws
+    🗄️  Database:      JSON Relational Store (ACID persistent)
+    =======================================================
+    `);
+  });
+}
+
+export { app, server };
+export default app;
+

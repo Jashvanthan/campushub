@@ -2681,35 +2681,42 @@ export default function App() {
 
   /* Register new user */
   async function handleRegister(u, pw, em) {
-    if (users?.[u]) return { success:false, message:'Username already exists!' };
+    const cleanU = (u || '').trim().toLowerCase();
+    if (!cleanU) return { success: false, message: 'Username is required' };
+    if (users?.[cleanU]) return { success: false, message: 'Username already exists!' };
     try {
-      const res = await api.register({ username: u, password: pw, email: em });
+      const res = await api.register({ username: cleanU, password: pw, email: em });
       if (res && res.success) {
         const hashed = await hashPassword(pw);
         const registeredUser = {
           password: hashed,
           role: res.user?.role || 'student',
-          name: res.user?.name || u,
+          name: res.user?.name || cleanU,
           email: em || '',
-          avatar: res.user?.avatar || getUserInitials(u, u),
+          avatar: res.user?.avatar || getUserInitials(cleanU, cleanU),
           institution: res.user?.institution || '',
           major: res.user?.major || '',
           bio: res.user?.bio || '',
           skills: res.user?.skills || [],
           ...res.user
         };
-        setUsers(prev => ({ ...prev, [u]: registeredUser }));
+        setUsers(prev => {
+          const next = { ...prev, [cleanU]: registeredUser };
+          storageManager.setItem('campushub_users', next);
+          broadcast('SYNC_USERS', next);
+          return next;
+        });
 
         // Dispatch EmailJS Welcome Email
         sendWelcomeEmail({
           name: registeredUser.name,
-          username: u,
+          username: cleanU,
           email: em || registeredUser.email
         }).catch(err => console.warn('Welcome email dispatch error:', err));
 
         return { success: true };
-      } else if (res && res.message) {
-        return { success: false, message: res.message };
+      } else if (res && (res.message || res.error)) {
+        return { success: false, message: res.message || res.error };
       }
     } catch (e) {
       console.warn('API register fallback to local state:', e);
@@ -2718,24 +2725,29 @@ export default function App() {
     const localUser = {
       password: hashed,
       role: 'student',
-      name: u,
+      name: cleanU,
       email: em || '',
-      avatar: getUserInitials(u, u),
+      avatar: getUserInitials(cleanU, cleanU),
       institution: '',
       major: '',
       bio: '',
       skills: []
     };
-    setUsers(prev => ({ ...prev, [u]: localUser }));
+    setUsers(prev => {
+      const next = { ...prev, [cleanU]: localUser };
+      storageManager.setItem('campushub_users', next);
+      broadcast('SYNC_USERS', next);
+      return next;
+    });
 
     // Dispatch EmailJS Welcome Email
     sendWelcomeEmail({
-      name: u,
-      username: u,
-      email: em || `${u}@campushub.edu`
+      name: cleanU,
+      username: cleanU,
+      email: em || `${cleanU}@campushub.edu`
     }).catch(err => console.warn('Welcome email dispatch error:', err));
 
-    return { success:true };
+    return { success: true };
   }
 
   /* Password Reset Handlers */
@@ -2847,9 +2859,26 @@ export default function App() {
 
   /* Login & Logout Handlers */
   const handleLogin = useCallback((userSession) => {
+    if (!userSession || !userSession.username) return;
+    const u = userSession.username.toLowerCase();
     setSession(userSession);
     storageManager.setItem('campushub_session', userSession);
-  }, []);
+
+    // Sync logged in user into local users map so author/profile relations work across devices
+    setUsers(prev => {
+      const next = {
+        ...(prev || {}),
+        [u]: {
+          ...(prev?.[u] || {}),
+          ...userSession,
+          username: u
+        }
+      };
+      storageManager.setItem('campushub_users', next);
+      broadcast('SYNC_USERS', next);
+      return next;
+    });
+  }, [broadcast]);
 
   const handleLogout = useCallback(() => {
     setSession(null);

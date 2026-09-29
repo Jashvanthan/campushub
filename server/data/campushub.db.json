@@ -62,6 +62,21 @@
         "IoT"
       ],
       "createdAt": "2026-09-26T05:38:52.155Z"
+    },
+    "device_test_1790689269158": {
+      "id": "user-1790689269361",
+      "username": "device_test_1790689269158",
+      "name": "Cross Device Tester",
+      "email": "device_test_1790689269158@example.com",
+      "password": "$2b$10$qB6QuCDBchDdxiH6uA1Ik.hDZpmfAo8kGErpEDTOq6a4mCiqz1EgK",
+      "role": "student",
+      "department": "Computer Science",
+      "institution": "Campus University",
+      "major": "Computer Science",
+      "bio": "",
+      "avatar": "CD",
+      "skills": [],
+      "createdAt": "2026-09-29T13:41:09.361Z"
     }
   },
   "posts": [

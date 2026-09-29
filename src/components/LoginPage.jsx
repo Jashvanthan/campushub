@@ -231,6 +231,7 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
       }
 
       // 2. If not found locally or password was wrong locally, try backend API directly
+      let backendError = null;
       try {
         const res = await api.login(u, password);
         if (res && res.success && res.user) {
@@ -240,13 +241,17 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
           onLogin(res.user);
           setLoading(false);
           return;
+        } else if (res && (res.message || res.error)) {
+          backendError = res.message || res.error;
         }
       } catch (apiErr) {
         console.warn('Backend API login error:', apiErr);
       }
 
       // 3. Error reporting
-      if (!usr) {
+      if (backendError) {
+        setError(backendError);
+      } else if (!usr) {
         setError('User does not exist. Please check your username or register a new account.');
       } else {
         setError('Incorrect password. Please verify your credentials and try again.');
