@@ -69,13 +69,18 @@ def create_app(config_name=None):
     # Auto-create tables and seed database on initial boot safely
     with app.app_context():
         try:
-            db.create_all()
+            from sqlalchemy import inspect
+            inspector = inspect(db.engine)
+            if not inspector.has_table('users'):
+                db.create_all()
             seed_database()
         except Exception as e:
             try:
                 db.session.rollback()
             except Exception:
                 pass
-            app.logger.warning(f"Database initialization warning: {e}")
+            err_msg = str(e).lower()
+            if 'already exists' not in err_msg and 'unique constraint' not in err_msg:
+                app.logger.warning(f"Database initialization note: {e}")
 
     return app
