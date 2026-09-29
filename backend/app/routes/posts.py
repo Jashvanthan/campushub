@@ -211,16 +211,20 @@ def delete_post(current_user, post_id):
     if post.author_id != current_user.username and current_user.role != 'admin':
         return jsonify({'success': False, 'message': 'Unauthorized to delete this post'}), 403
 
-    Notification.query.filter(
-        (Notification.target_id == str(target_id)) & (Notification.target_tab == 'explore')
-    ).delete(synchronize_session=False)
+    # Permanently delete all associated notifications
+    Notification.query.filter(Notification.target_id == str(target_id)).delete(synchronize_session=False)
+
+    # Permanently delete associated likes, comments, and event registrations
+    PostLike.query.filter_by(post_id=target_id).delete(synchronize_session=False)
+    PostComment.query.filter_by(post_id=target_id).delete(synchronize_session=False)
+    EventRegistration.query.filter_by(event_id=target_id).delete(synchronize_session=False)
 
     db.session.delete(post)
     db.session.commit()
     db.session.expire_all()
     return jsonify({
         'success': True,
-        'message': 'Post deleted successfully',
+        'message': 'Post permanently deleted from database',
         'id': target_id
     }), 200
 

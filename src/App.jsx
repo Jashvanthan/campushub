@@ -1432,15 +1432,18 @@ export default function App() {
     try { api.deleteComment(postId, commentId).catch(() => {}); } catch(e) {}
   }
 
-  function handleDeletePost(id) {
+  async function handleDeletePost(id) {
+    if (!id) return;
+    
+    // 1. Permanently remove from local posts state
     setPosts(prev => {
-      const next = prev.filter(p => p.id !== id);
+      const next = (prev || []).filter(p => p.id !== id && String(p.id) !== String(id));
       broadcast('SYNC_POSTS', next);
       storageManager.setItem('campushub_posts', next);
       return next;
     });
 
-    // Cascade delete any linked workspace or requests
+    // 2. Cascade delete any linked workspace or requests
     const targetWs = (workspaces || []).find(w => w.ideaId === id || String(w.ideaId) === String(id) || w.id === `ws-${id}`);
     if (targetWs) {
       const wsId = targetWs.id;
@@ -1492,17 +1495,22 @@ export default function App() {
     }
 
     setContributionRequests(prev => {
-      const next = (prev || []).filter(r => r.postId !== id && r.ideaId !== id && String(r.ideaId) !== String(id));
+      const next = (prev || []).filter(r => r.postId !== id && String(r.postId) !== String(id) && r.ideaId !== id && String(r.ideaId) !== String(id));
       broadcast('SYNC_REQUESTS', next);
       storageManager.setItem('campushub_contribution_requests', next);
       return next;
     });
 
-    try { api.deletePost(id).catch(() => {}); } catch(e) {}
+    // 3. Permanently delete from backend database
+    try { 
+      await api.deletePost(id); 
+    } catch(e) {
+      console.warn('Backend deletePost sync:', e);
+    }
   }
 
   function handleToggleResolve(id) {
-    const target = (posts || []).find(p => p.id === id);
+    const target = (posts || []).find(p => p.id === id || String(p.id) === String(id));
     if (!target) return;
     const isAuthor = Boolean(session?.username && (target.authorId === session.username || target.author?.name === session.username));
     const isAdmin = session?.role === 'admin';
@@ -1513,7 +1521,7 @@ export default function App() {
 
     setPosts(prev => {
       const next = prev.map(p => {
-        if (p.id !== id) return p;
+        if (p.id !== id && String(p.id) !== String(id)) return p;
         const res = !p.resolved;
         try { api.updatePost(id, { resolved: res, priority: res ? 'Resolved' : 'Medium' }).catch(() => {}); } catch(e) {}
         return { ...p, resolved: res };
@@ -1525,7 +1533,7 @@ export default function App() {
   }
 
   async function handleClearIssue(id) {
-    const target = (posts || []).find(p => p.id === id);
+    const target = (posts || []).find(p => p.id === id || String(p.id) === String(id));
     if (!target) return;
     const isAuthor = Boolean(session?.username && (target.authorId === session.username || target.author?.name === session.username));
     const isAdmin = session?.role === 'admin';
@@ -1541,13 +1549,13 @@ export default function App() {
     if (!confirmed) return;
 
     setPosts(prev => {
-      const next = prev.filter(p => p.id !== id);
+      const next = (prev || []).filter(p => p.id !== id && String(p.id) !== String(id));
       broadcast('SYNC_POSTS', next);
       storageManager.setItem('campushub_posts', next);
       return next;
     });
 
-    try { api.deletePost(id).catch(() => {}); } catch(e) {}
+    try { await api.deletePost(id); } catch(e) {}
   }
 
   async function handleShare(post) {
