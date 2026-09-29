@@ -219,7 +219,8 @@ def toggle_support(current_user, idea_id):
         supported = True
 
     db.session.commit()
-    supported_users = [s.username for s in idea.supports]
+    fresh_supports = IdeaSupport.query.filter_by(idea_id=idea_id).all()
+    supported_users = [s.username for s in fresh_supports]
     return jsonify({
         'success': True,
         'supported': supported,
@@ -244,7 +245,8 @@ def toggle_follow(current_user, idea_id):
         following = True
 
     db.session.commit()
-    followers = [f.username for f in idea.followers]
+    fresh_followers = IdeaFollower.query.filter_by(idea_id=idea_id).all()
+    followers = [f.username for f in fresh_followers]
     return jsonify({
         'success': True,
         'following': following,

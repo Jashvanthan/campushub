@@ -1081,6 +1081,20 @@ export default function App() {
         const savedNotifs = await storageManager.getItem('campushub_notifications');
         setNotifications(savedNotifs && Array.isArray(savedNotifs) ? savedNotifs : SEED_NOTIFICATIONS);
 
+        // Seamless background sync with Backend API Database
+        api.getIdeas().then(res => {
+          if (res && res.success && Array.isArray(res.ideas) && res.ideas.length > 0) {
+            setIdeas(res.ideas);
+            storageManager.setItem('campushub_ideas', res.ideas);
+          }
+        }).catch(() => {});
+
+        api.getWorkspaces().then(res => {
+          if (res && res.success && Array.isArray(res.workspaces) && res.workspaces.length > 0) {
+            setWorkspaces(res.workspaces);
+            storageManager.setItem('campushub_workspaces', res.workspaces);
+          }
+        }).catch(() => {});
       } catch (err) {
         console.error('StorageManager error:', err);
         setUsers({ admin:{ password:'', role:'admin' }, std1:{ password:'', role:'student' } });
@@ -1743,10 +1757,11 @@ export default function App() {
     setToast('✓ Idea and its workspace have been deleted and closed.');
   };
 
-  const handleToggleSupport = (ideaId) => {
+  const handleToggleSupport = async (ideaId) => {
     if (!session) return;
     const u = session.username;
 
+    // Optimistic UI update
     setIdeas(prev => {
       const next = (prev || []).map(idea => {
         if (idea.id !== ideaId) return idea;
@@ -1770,12 +1785,34 @@ export default function App() {
       broadcast('SYNC_IDEAS', next);
       return next;
     });
+
+    // Persist to Backend API Database
+    try {
+      const res = await api.toggleSupport(ideaId);
+      if (res && res.success && res.supportedBy) {
+        setIdeas(prev => {
+          const next = (prev || []).map(idea => {
+            if (idea.id !== ideaId) return idea;
+            return {
+              ...idea,
+              supportedBy: res.supportedBy,
+              supportCount: res.supportCount !== undefined ? res.supportCount : res.supportedBy.length
+            };
+          });
+          broadcast('SYNC_IDEAS', next);
+          return next;
+        });
+      }
+    } catch (err) {
+      console.warn('Failed to persist idea support toggle to database:', err);
+    }
   };
 
-  const handleToggleFollow = (ideaId) => {
+  const handleToggleFollow = async (ideaId) => {
     if (!session) return;
     const u = session.username;
 
+    // Optimistic UI update
     setIdeas(prev => {
       const next = (prev || []).map(idea => {
         if (idea.id !== ideaId) return idea;
@@ -1790,6 +1827,23 @@ export default function App() {
       broadcast('SYNC_IDEAS', next);
       return next;
     });
+
+    // Persist to Backend API Database
+    try {
+      const res = await api.toggleFollow(ideaId);
+      if (res && res.success && res.followedBy) {
+        setIdeas(prev => {
+          const next = (prev || []).map(idea => {
+            if (idea.id !== ideaId) return idea;
+            return { ...idea, followedBy: res.followedBy };
+          });
+          broadcast('SYNC_IDEAS', next);
+          return next;
+        });
+      }
+    } catch (err) {
+      console.warn('Failed to persist idea follow toggle to database:', err);
+    }
   };
 
   const handleLeaveWorkspace = (workspaceId) => {
