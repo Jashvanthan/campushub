@@ -82,7 +82,16 @@ class Post(db.Model):
         self.event_details_json = json.dumps(val if isinstance(val, dict) else {})
 
     def to_dict(self):
-        liked_users = [l.username for l in self.likes]
+        try:
+            liked_users = [l.username for l in self.likes]
+        except Exception:
+            liked_users = [l.username for l in PostLike.query.filter_by(post_id=self.id).all()]
+
+        try:
+            comments_list = [c.to_dict() for c in self.comments]
+        except Exception:
+            comments_list = [c.to_dict() for c in PostComment.query.filter_by(post_id=self.id).order_by(PostComment.created_at.asc()).all()]
+
         return {
             'id': self.id,
             'type': self.type,
@@ -114,7 +123,7 @@ class Post(db.Model):
             'visibility': self.visibility,
             'likes': len(liked_users),
             'likedBy': liked_users,
-            'comments': [c.to_dict() for c in self.comments],
+            'comments': comments_list,
             'date': self.created_at.strftime('%b %d, %Y') if self.created_at else 'Recently',
             'createdAt': self.created_at.isoformat() if self.created_at else None
         }

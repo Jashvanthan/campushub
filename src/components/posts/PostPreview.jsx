@@ -24,7 +24,7 @@ export default function PostPreview({ postData, user }) {
       <div className="preview-header-bar">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <Sparkles size={16} color="var(--accent-primary)" />
-          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff' }}>Live Card Preview</span>
+          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>Live Card Preview</span>
         </div>
         <span className="preview-badge">Real-Time Sync</span>
       </div>
@@ -71,7 +71,7 @@ export default function PostPreview({ postData, user }) {
 
         {/* Post Content */}
         <div className="post-content">
-          <h2 style={{ wordBreak: 'break-word', color: postData.title ? '#fff' : 'rgba(255,255,255,0.3)' }}>
+          <h2 style={{ wordBreak: 'break-word', color: 'var(--text-primary)', opacity: postData.title ? 1 : 0.3 }}>
             {postData.title || 'Your Post Title will appear here...'}
           </h2>
 
@@ -90,7 +90,8 @@ export default function PostPreview({ postData, user }) {
             style={{
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-word',
-              color: postData.content ? 'var(--text-secondary)' : 'rgba(255,255,255,0.3)',
+              color: 'var(--text-secondary)',
+              opacity: postData.content ? 1 : 0.5,
               fontStyle: postData.content ? 'normal' : 'italic',
             }}
           >

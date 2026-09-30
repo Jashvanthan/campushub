@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { storageManager } from './services/storageManager';
+import { networkManager } from './services/networkManager';
 
 import {
   Code2, Calendar, Flag, Lightbulb, Heart, MessageCircle, Share2,
@@ -35,9 +36,10 @@ import {
   SEED_CHAT_MESSAGES,
   SEED_NOTIFICATIONS
 } from './data/seedIdeasAndWorkspaces';
-import { api } from './services/api';
+import { api, isTokenExpired } from './services/api';
 import { sendWelcomeEmail } from './services/emailJsService';
 import NetworkConnectionLoader from './components/common/NetworkConnectionLoader';
+import HelpCenterPage from './components/common/HelpCenterPage';
 import { usePopup } from './components/common/PopupDialog';
 
 /* ─────────────────────────────────────────────────
@@ -254,13 +256,14 @@ export function decodePostShareData(encodedStr) {
 ───────────────────────────────────────────────── */
 function PostCard({
   post, user, onLike, onDelete, onEdit, onToggleComment,
-  commentOpen, commentText, onCommentChange, onCommentSubmit,
+  commentOpen, onCommentSubmit,
   onDeleteComment, onShare, onToggleResolve, onClearIssue,
   isAdmin, isAuthenticated, contributionRequests = [],
   workspaces = [], ideas = [], users = {}, onNavigateToWorkspace,
   onJoinContribution, onManageRequests, onOpenUserProfile,
   isModal = false
 }) {
+  const [localCommentText, setLocalCommentText] = useState('');
   const { showConfirm } = usePopup();
   // STRICT: Only the user whose username strictly matches post.authorId is the owner
   const isAuthor = Boolean(user?.username && (post.authorId === user.username || post.author?.name === user.username));
@@ -432,10 +435,19 @@ function PostCard({
       {/* Actions */}
       <div className="post-actions">
         <div className="post-social-actions">
-          <button className={`action-btn${post.likedBy?.includes(user?.username) ? ' liked' : ''}`} onClick={() => onLike(post.id)}>
-            <Heart size={18} fill={post.likedBy?.includes(user?.username) ? 'currentColor' : 'none'} />
-            <span>{post.likes || 0} Likes</span>
-          </button>
+          {(() => {
+            const currentU = user?.username ? String(user.username).trim().toLowerCase() : '';
+            const isLiked = Boolean(Array.isArray(post.likedBy) && currentU && (
+              post.likedBy.includes(user.username) ||
+              post.likedBy.some(x => x && String(x).trim().toLowerCase() === currentU)
+            ));
+            return (
+              <button className={`action-btn${isLiked ? ' liked' : ''}`} onClick={() => onLike(post.id)}>
+                <Heart size={18} fill={isLiked ? 'currentColor' : 'none'} />
+                <span>{post.likes || 0} Likes</span>
+              </button>
+            );
+          })()}
 
           {isAuthenticated && (
             <button className="action-btn" onClick={() => onToggleComment(post.id)}>
@@ -581,9 +593,13 @@ function PostCard({
             <div className="post-avatar" style={{ width:'32px', height:'32px', fontSize:'0.8rem' }}>
               {renderAvatarContent(user?.avatar, user?.name, user?.username, (user?.username || 'U').slice(0, 2).toUpperCase())}
             </div>
-            <form onSubmit={e => onCommentSubmit(e, post.id)} className="comment-form">
-              <input type="text" className="comment-input" placeholder="Write a comment..." value={commentText}
-                onChange={e => onCommentChange(e.target.value)} />
+            <form onSubmit={e => {
+              e.preventDefault();
+              onCommentSubmit(e, post.id, localCommentText);
+              setLocalCommentText('');
+            }} className="comment-form">
+              <input type="text" className="comment-input" placeholder="Write a comment..." value={localCommentText}
+                onChange={e => setLocalCommentText(e.target.value)} />
               <button type="submit" className="primary-btn comment-submit-btn">Post</button>
             </form>
           </div>
@@ -662,16 +678,7 @@ export default function App() {
   const [theme, setTheme]           = useState(() => localStorage.getItem('campushub_theme') || 'dark');
 
   // UI state
-  const [showIntro, setShowIntro] = useState(() => {
-    const rawPath = typeof window !== 'undefined' ? (window.location.pathname || '') : '';
-    const search = typeof window !== 'undefined' ? (window.location.search || '') : '';
-    const hash = typeof window !== 'undefined' ? (window.location.hash || '') : '';
-    if (rawPath.toLowerCase().includes('/post') || search.toLowerCase().includes('post') || hash.toLowerCase().includes('post') || search.includes('pdata')) {
-      sessionStorage.setItem('campushub_intro_played', 'true');
-      return false;
-    }
-    return sessionStorage.getItem('campushub_intro_played') !== 'true';
-  });
+  const [showIntro, setShowIntro] = useState(false);
   const [activeTab, setActiveTab]   = useState('all');
   const [showNewPost, setShowNewPost] = useState(false);
   const [editingPost, setEditingPost] = useState(null);
@@ -962,8 +969,27 @@ export default function App() {
         }
 
         const savedSession = await storageManager.getItem('campushub_session');
-        if (savedSession) {
-          setSession(savedSession);
+        const token = typeof localStorage !== 'undefined' ? localStorage.getItem('campushub_jwt_token') : null;
+        const isAuthSession = savedSession && savedSession.username && savedSession.role !== 'guest';
+
+        const isExpired = isAuthSession && (
+          (token && isTokenExpired(token)) ||
+          (savedSession.expiresAt && Date.now() > savedSession.expiresAt)
+        );
+
+        if (isExpired) {
+          // Token is expired! Clean up session and require login
+          await storageManager.setItem('campushub_session', null);
+          try { localStorage.removeItem('campushub_jwt_token'); } catch (_) {}
+          setSession(null);
+          setToast('Your session has expired. Please sign in again.');
+        } else if (savedSession) {
+          const refreshedSession = {
+            ...savedSession,
+            expiresAt: savedSession.expiresAt || (Date.now() + 15 * 60 * 1000)
+          };
+          setSession(refreshedSession);
+          storageManager.setItem('campushub_session', refreshedSession);
         } else {
           const rawPath = typeof window !== 'undefined' ? (window.location.pathname || '') : '';
           const search = typeof window !== 'undefined' ? (window.location.search || '') : '';
@@ -1082,6 +1108,13 @@ export default function App() {
         setNotifications(savedNotifs && Array.isArray(savedNotifs) ? savedNotifs : SEED_NOTIFICATIONS);
 
         // Seamless background sync with Backend API Database
+        api.getPosts().then(res => {
+          if (res && res.success && Array.isArray(res.posts) && res.posts.length > 0) {
+            setPosts(res.posts);
+            storageManager.setItem('campushub_posts', res.posts);
+          }
+        }).catch(() => {});
+
         api.getIdeas().then(res => {
           if (res && res.success && Array.isArray(res.ideas) && res.ideas.length > 0) {
             setIdeas(res.ideas);
@@ -1359,25 +1392,34 @@ export default function App() {
   function handleLike(id) {
     if (!session) return;
     const u = session.username;
+    const uLower = String(u || '').trim().toLowerCase();
 
     const targetPost = (posts || []).find(p => p.id === id || String(p.id) === String(id));
     const matchingIdea = (ideas || []).find(i => (targetPost && i.title && targetPost.title && i.title.toLowerCase().trim() === targetPost.title.toLowerCase().trim()) || String(i.id) === String(id) || i.id === `idea-${id}`);
 
-    const isCurrentlyLiked = targetPost && Array.isArray(targetPost.likedBy) && targetPost.likedBy.includes(u);
-    
+    const isCurrentlyLiked = Boolean(targetPost && Array.isArray(targetPost.likedBy) && (
+      targetPost.likedBy.includes(u) ||
+      targetPost.likedBy.some(x => x && String(x).trim().toLowerCase() === uLower)
+    ));
+
+    // Invalidate GET cache immediately so any fresh fetch pulls new DB state
+    networkManager.clearCache();
+
     // 1. Optimistically update local posts state
     setPosts(prev => {
-      const next = prev.map(p => {
+      const next = (prev || []).map(p => {
         if (p.id !== id && String(p.id) !== String(id)) return p;
         const lb = Array.isArray(p.likedBy) ? p.likedBy : [];
-        const isLiked = lb.includes(u);
-        const newLb = isLiked ? lb.filter(x => x !== u) : [...lb, u];
-        const newCount = Math.max(0, isLiked ? ((p.likes || 1) - 1) : ((p.likes || 0) + 1));
+        const isLiked = lb.includes(u) || lb.some(x => x && String(x).trim().toLowerCase() === uLower);
+        const newLb = isLiked 
+          ? lb.filter(x => String(x).trim().toLowerCase() !== uLower) 
+          : [...lb, u];
+        const newCount = isLiked ? Math.max(0, (p.likes || 1) - 1) : ((p.likes || 0) + 1);
 
         if (!isLiked) {
           broadcast('SYNC_POSTS', null, `${u} liked your post: ${p.title}`);
           const authorId = p.authorId || p.author?.name || p.author;
-          if (authorId && authorId !== u) {
+          if (authorId && String(authorId).trim().toLowerCase() !== uLower) {
             addNotification({
               recipientId: authorId,
               senderId: u,
@@ -1403,8 +1445,10 @@ export default function App() {
       setIdeas(prev => {
         const next = (prev || []).map(i => {
           if (i.id !== matchingIdea.id && String(i.id) !== String(matchingIdea.id)) return i;
-          const isSup = (i.supportedBy || []).includes(u);
-          const newSup = isSup ? (i.supportedBy || []).filter(x => x !== u) : [...(i.supportedBy || []), u];
+          const isSup = (i.supportedBy || []).some(x => x && String(x).trim().toLowerCase() === uLower);
+          const newSup = isSup 
+            ? (i.supportedBy || []).filter(x => String(x).trim().toLowerCase() !== uLower) 
+            : [...(i.supportedBy || []), u];
           const newCnt = Math.max(0, isSup ? ((i.supportCount || 1) - 1) : ((i.supportCount || 0) + 1));
           return {
             ...i,
@@ -1422,8 +1466,9 @@ export default function App() {
     try { 
       api.toggleLike(id).then((res) => {
         if (res && res.success) {
+          networkManager.clearCache();
           setPosts(prev => {
-            const synced = prev.map(p => {
+            const synced = (prev || []).map(p => {
               if (p.id !== id && String(p.id) !== String(id)) return p;
               return {
                 ...p,
@@ -1453,13 +1498,18 @@ export default function App() {
         }
       }).catch((err) => {
         console.warn('Backend like sync error:', err);
+        if (err?.code === 'UNAUTHORIZED' || (err?.message || '').includes('401')) {
+          setToast('Session expired. Please log out and log back in to save likes.');
+        }
       }); 
-    } catch(e) {}
+    } catch(e) {
+      console.warn('Like failed:', e);
+    }
   }
 
-  function handleCommentSubmit(e, postId) {
+  function handleCommentSubmit(e, postId, submittedText) {
     e.preventDefault();
-    const text = commentText.trim();
+    const text = (submittedText || '').trim();
     if (!text) return;
 
     const targetPost = (posts || []).find(p => p.id === postId || String(p.id) === String(postId));
@@ -1474,6 +1524,8 @@ export default function App() {
       text,
       createdAt: new Date().toISOString()
     };
+
+    networkManager.clearCache();
 
     setPosts(prev => {
       const next = (prev || []).map(p => {
@@ -1502,7 +1554,9 @@ export default function App() {
 
     try { 
       api.addComment(postId, text).then(res => {
+        networkManager.clearCache();
         if (res && res.success && res.comment) {
+          // Replace optimistic comment with real DB comment (has correct ID)
           setPosts(prev => {
             const synced = (prev || []).map(p => {
               if (p.id !== postId && String(p.id) !== String(postId)) return p;
@@ -1514,9 +1568,25 @@ export default function App() {
             return synced;
           });
         }
-      }).catch(() => {}); 
-    } catch(e) {}
-    setCommentText('');
+ else if (res && (res.code === 'UNAUTHORIZED' || (res.error || '').includes('401'))) {
+          // Auth failed - remove optimistic comment and notify user
+          setPosts(prev => {
+            const rollback = (prev || []).map(p => {
+              if (p.id !== postId && String(p.id) !== String(postId)) return p;
+              return { ...p, comments: (p.comments || []).filter(c => c.id !== newComment.id) };
+            });
+            storageManager.setItem('campushub_posts', rollback);
+            return rollback;
+          });
+          setToast('Session expired. Please log out and log back in to save comments.');
+        } else if (res && !res.success) {
+          console.error('Comment save failed:', res);
+          setToast('Comment could not be saved. Please try again.');
+        }
+      }).catch((err) => {
+        console.warn('Comment sync error:', err);
+      }); 
+    } catch(e) { console.warn('Comment failed:', e); }
   }
 
   async function handleDeleteComment(postId, commentId) {
@@ -2877,6 +2947,11 @@ export default function App() {
     try {
       const res = await api.register({ username: cleanU, password: pw, email: em });
       if (res && res.success) {
+        if (res.token) {
+          try {
+            localStorage.setItem('campushub_jwt_token', res.token);
+          } catch (_) {}
+        }
         const hashed = await hashPassword(pw);
         const registeredUser = {
           password: hashed,
@@ -3051,8 +3126,15 @@ export default function App() {
   const handleLogin = useCallback((userSession) => {
     if (!userSession || !userSession.username) return;
     const u = userSession.username.toLowerCase();
-    setSession(userSession);
-    storageManager.setItem('campushub_session', userSession);
+    const sessionWithExpiry = {
+      ...userSession,
+      username: u,
+      expiresAt: Date.now() + 15 * 60 * 1000
+    };
+    setShowIntro(false);
+    sessionStorage.setItem('campushub_intro_played', 'true');
+    setSession(sessionWithExpiry);
+    storageManager.setItem('campushub_session', sessionWithExpiry);
 
     // Sync logged in user into local users map so author/profile relations work across devices
     setUsers(prev => {
@@ -3060,7 +3142,7 @@ export default function App() {
         ...(prev || {}),
         [u]: {
           ...(prev?.[u] || {}),
-          ...userSession,
+          ...sessionWithExpiry,
           username: u
         }
       };
@@ -3070,15 +3152,39 @@ export default function App() {
     });
   }, [broadcast]);
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback((toastMsg = null) => {
     setSession(null);
     storageManager.setItem('campushub_session', null);
     try {
       localStorage.removeItem('campushub_jwt_token');
     } catch (_) {}
+    if (toastMsg) {
+      setToast(toastMsg);
+    }
     setActiveTab('all');
     setMobileOpen(false);
   }, []);
+
+  // Global listener for token expiration / 401 unauthorized events
+  useEffect(() => {
+    const onTokenExpired = () => {
+      handleLogout('Your session has expired. Please sign in again.');
+    };
+    window.addEventListener('campushub:token_expired', onTokenExpired);
+    return () => window.removeEventListener('campushub:token_expired', onTokenExpired);
+  }, [handleLogout]);
+
+  // Periodic expiration checker (runs every 15s for active authenticated sessions)
+  useEffect(() => {
+    if (!session || session.role === 'guest') return;
+    const interval = setInterval(() => {
+      const token = typeof localStorage !== 'undefined' ? localStorage.getItem('campushub_jwt_token') : null;
+      if (isTokenExpired(token)) {
+        handleLogout('Your session has expired. Please sign in again.');
+      }
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [session, handleLogout]);
 
   const handleCloseSharedPostModal = useCallback(() => {
     setViewingSharedPost(null);
@@ -3397,7 +3503,7 @@ export default function App() {
 
       {mobileOpen && <div className="mobile-menu-overlay" onClick={() => setMobileOpen(false)} />}
 
-      <main className={`main-content ${['admin', 'profile', 'ideas', 'workspaces', 'search'].includes(activeTab) ? 'full-width' : ''}`}>
+      <main className={`main-content ${['admin', 'profile', 'ideas', 'workspaces', 'search', 'helpcenter'].includes(activeTab) ? 'full-width' : ''}`}>
         {/* Guest banner */}
         {isGuest && (
           <div className="guest-banner">
@@ -3851,10 +3957,32 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* Help Center Link — bottom of profile page */}
+                <div style={{ padding: '1.5rem', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.6rem', marginTop: '0.5rem' }}>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0, textAlign: 'center' }}>
+                    Need help or want to share feedback about CampusHub?
+                  </p>
+                  <button
+                    type="button"
+                    className="secondary-btn"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.55rem 1.4rem', fontWeight: 600, fontSize: '0.88rem' }}
+                    onClick={() => navTo('helpcenter')}
+                  >
+                    <HelpCircle size={16} /> Visit Help Center &amp; Give Feedback
+                  </button>
+                </div>
+
               </div>
             </section>
           );
         })()
+        /* Help Center Page */
+        ) : activeTab === 'helpcenter' ? (
+          <HelpCenterPage
+            session={session}
+            onBack={() => navTo('profile')}
+          />
+
         /* Ideas & Contributions Page */
         ) : activeTab === 'ideas' ? (
           <section className="feed" id="feed" style={{ display:'block' }}>
@@ -4087,7 +4215,7 @@ export default function App() {
         )}
 
         {/* Sidebar only on feed views */}
-        {activeTab !== 'admin' && activeTab !== 'profile' && activeTab !== 'ideas' && activeTab !== 'workspaces' && activeTab !== 'search' && (
+        {activeTab !== 'admin' && activeTab !== 'profile' && activeTab !== 'ideas' && activeTab !== 'workspaces' && activeTab !== 'search' && activeTab !== 'helpcenter' && (
           <aside className="side-panel">
             <div className="side-widget glass-panel">
               <h3>Trending Projects</h3>

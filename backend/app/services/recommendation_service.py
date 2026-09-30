@@ -323,8 +323,8 @@ class RecommendationService:
             ptype = item['type']
             current_author_count = author_counts.get(author, 0)
             
-            # Allow max 2 from same author in recommendation feed to guarantee diversity
-            if current_author_count >= 2:
+            # Allow author capping only when candidate pool is large (> 20)
+            if len(scored_candidates) > 20 and current_author_count >= 3:
                 continue
 
             author_counts[author] = current_author_count + 1

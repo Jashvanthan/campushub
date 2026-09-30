@@ -22,7 +22,7 @@ def get_database_url():
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'campushub-super-secret-key-2026-production')
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'campushub-jwt-secret-token-key-2026')
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=7)
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=15)
     
     SQLALCHEMY_DATABASE_URI = get_database_url()
     SQLALCHEMY_TRACK_MODIFICATIONS = False

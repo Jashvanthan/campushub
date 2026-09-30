@@ -14,7 +14,7 @@ import { storageManager } from './storageManager';
 
 const QUEUE_STORAGE_KEY = 'campushub_offline_queue';
 const CACHE_STORAGE_KEY = 'campushub_network_cache';
-const DEFAULT_TTL_MS = 60 * 1000; // 1 minute cache TTL for GET requests
+const DEFAULT_TTL_MS = 15 * 1000; // 15 second cache TTL for GET requests (short to avoid stale likes/comments)
 
 class NetworkManager {
   constructor() {
@@ -164,21 +164,43 @@ class NetworkManager {
     while (attempt < maxRetries) {
       try {
         const response = await fetch(url, options);
-        if (response.ok || response.status < 500) {
-          // 2xx, 3xx, 4xx (client errors are not retried)
+        
+        if (response.ok) {
+          // 2xx success - parse and return JSON
           const contentType = response.headers.get('content-type') || '';
           if (contentType.includes('application/json')) {
             return await response.json();
           }
           const text = await response.text();
-          try {
-            return JSON.parse(text);
-          } catch (_) {
-            return { success: response.ok, message: text, status: response.status };
+          try { return JSON.parse(text); } catch (_) {
+            return { success: true, message: text, status: response.status };
           }
         }
-        // 5xx Server Error - retry
-        throw new Error(`Server returned HTTP ${response.status}`);
+
+        if (response.status >= 400 && response.status < 500) {
+          // Check for 401 on authenticated endpoints (exclude login/register which return 401 for wrong credentials)
+          const isLoginOrRegister = url.includes('/auth/login') || url.includes('/auth/register');
+          if (response.status === 401 && !isLoginOrRegister && typeof window !== 'undefined') {
+            const hasToken = typeof localStorage !== 'undefined' && localStorage.getItem('campushub_jwt_token');
+            if (hasToken) {
+              window.dispatchEvent(new CustomEvent('campushub:token_expired', {
+                detail: { endpoint: url, status: 401 }
+              }));
+            }
+          }
+
+          // 4xx Client error - read JSON body and return it (don't retry, don't throw)
+          // This preserves error messages like "Incorrect password", "Post not found" etc.
+          const contentType = response.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            const body = await response.json();
+            return { ...body, success: false, _httpStatus: response.status };
+          }
+          return { success: false, error: `HTTP ${response.status}`, _httpStatus: response.status };
+        }
+
+        // 5xx Server Error - retry with backoff
+        throw new Error(`Server error HTTP ${response.status}`);
       } catch (err) {
         attempt++;
         if (attempt >= maxRetries) {
@@ -205,7 +227,9 @@ class NetworkManager {
 
     const method = (options.method || 'GET').toUpperCase();
     const isGet = method === 'GET';
-    const cacheKey = `${method}:${endpoint}`;
+    // Include auth token in cache key so authenticated/unauthenticated requests never share cache
+    const authHeader = (options.headers && options.headers['Authorization']) ? options.headers['Authorization'].slice(-16) : 'noauth';
+    const cacheKey = `${method}:${endpoint}:${authHeader}`;
 
     // 1. If GET and cached & fresh, return from memory cache
     if (isGet && useCache) {
@@ -231,14 +255,21 @@ class NetworkManager {
             data,
             timestamp: Date.now()
           });
+        } else if (!isGet && data && data.success !== false) {
+          // Clear cache on successful mutations to prevent stale data
+          this.memoryCache.clear();
         }
 
         return data;
       } catch (err) {
         console.warn(`[NetworkManager] Request failed for ${endpoint}:`, err.message);
 
+        // Only network failures and 5xx server errors reach here now (4xx return directly)
+        const isServerError = err.message.includes('Server error') || err.message.includes('50');
+        const isNetworkFailure = !this.isOnline || err.message.toLowerCase().includes('failed to fetch') || err.message.toLowerCase().includes('network');
+
         // If offline or network dropped during mutation, enqueue for later sync
-        if (!isGet && allowOfflineQueue) {
+        if (!isGet && allowOfflineQueue && (isNetworkFailure || isServerError) && !this.isOnline) {
           let parsedBody = null;
           try {
             parsedBody = options.body ? JSON.parse(options.body) : null;
@@ -260,7 +291,7 @@ class NetworkManager {
           };
         }
 
-        // Return cached stale data if available as emergency fallback
+        // Return cached stale data if available as emergency fallback for GETs
         if (isGet && this.memoryCache.has(cacheKey)) {
           console.info(`[NetworkManager] Returning stale cached data for ${endpoint}`);
           return this.memoryCache.get(cacheKey).data;

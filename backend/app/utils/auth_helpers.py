@@ -18,7 +18,9 @@ def generate_token(user, custom_expiry=None):
     - exp: Expiration timestamp
     """
     now = datetime.now(timezone.utc)
-    expires_in = custom_expiry or current_app.config.get('JWT_ACCESS_TOKEN_EXPIRES', timedelta(days=7))
+    # Enforce 15-minute token expiration
+    configured_expiry = current_app.config.get('JWT_ACCESS_TOKEN_EXPIRES')
+    expires_in = custom_expiry or (configured_expiry if isinstance(configured_expiry, timedelta) and configured_expiry <= timedelta(minutes=15) else timedelta(minutes=15))
     
     payload = {
         'sub': str(user.id),
@@ -36,6 +38,7 @@ def generate_token(user, custom_expiry=None):
 def decode_token(token):
     """
     Safely decode and verify JWT signature, algorithm, and expiration.
+    Returns (payload, error_code).
     """
     try:
         payload = jwt.decode(
@@ -48,13 +51,13 @@ def decode_token(token):
                 'verify_exp': True
             }
         )
-        return payload
+        return payload, None
     except jwt.ExpiredSignatureError:
-        return None
+        return None, 'TOKEN_EXPIRED'
     except jwt.InvalidTokenError:
-        return None
+        return None, 'INVALID_TOKEN'
     except Exception:
-        return None
+        return None, 'AUTH_ERROR'
 
 def get_current_user_from_request():
     """Extract and validate bearer token from Authorization header and fetch User model."""
@@ -66,7 +69,7 @@ def get_current_user_from_request():
     if not token:
         return None
 
-    payload = decode_token(token)
+    payload, _ = decode_token(token)
     if not payload or not payload.get('username'):
         return None
         
@@ -77,14 +80,31 @@ def jwt_required(optional=False):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            user = get_current_user_from_request()
-            if not user and not optional:
+            auth_header = request.headers.get('Authorization')
+            token = auth_header.split(' ', 1)[1].strip() if (auth_header and auth_header.startswith('Bearer ')) else None
+            
+            if token:
+                payload, err = decode_token(token)
+                if err == 'TOKEN_EXPIRED' and not optional:
+                    return jsonify({
+                        'success': False,
+                        'message': 'Your session has expired. Please sign in again.',
+                        'code': 'TOKEN_EXPIRED',
+                        'isExpired': True
+                    }), 401
+                if payload and payload.get('username'):
+                    user = User.query.filter_by(username=payload.get('username')).first()
+                    if user:
+                        return f(*args, current_user=user, **kwargs)
+
+            if not optional:
                 return jsonify({
                     'success': False,
-                    'message': 'Authentication required or token expired',
-                    'code': 'UNAUTHORIZED'
+                    'message': 'Authentication required or session expired',
+                    'code': 'UNAUTHORIZED',
+                    'isExpired': False
                 }), 401
-            return f(*args, current_user=user, **kwargs)
+            return f(*args, current_user=None, **kwargs)
         return decorated_function
     return decorator
 

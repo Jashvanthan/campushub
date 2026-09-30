@@ -190,8 +190,47 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
         return;
       }
 
-      // 1. Check local users first
-      const usr = users?.[u];
+      // 1. ALWAYS try backend API first to get a real JWT token
+      let backendRes = null;
+      try {
+        backendRes = await api.login(u, password);
+      } catch (_) {}
+
+      if (backendRes && backendRes.success && backendRes.user) {
+        // Backend auth successful - save JWT token and login
+        if (backendRes.token) {
+          localStorage.setItem('campushub_jwt_token', backendRes.token);
+        }
+        onLogin(backendRes.user);
+        setLoading(false);
+        return;
+      }
+
+      // 2. Backend unavailable or returned wrong credentials - try local auth as fallback
+      let matchedKey = u;
+      let usr = users?.[u];
+      const cleanU = u.replace(/\s+/g, '');
+      if (!usr && users) {
+        const found = Object.entries(users).find(([k, v]) => 
+          k.toLowerCase() === u ||
+          k.toLowerCase().replace(/\s+/g, '') === cleanU ||
+          k.toLowerCase().startsWith(u) ||
+          (v.username && v.username.toLowerCase() === u) ||
+          (v.username && v.username.toLowerCase().replace(/\s+/g, '') === cleanU) ||
+          (v.username && v.username.toLowerCase().startsWith(u)) ||
+          (v.email && v.email.toLowerCase() === u) ||
+          (v.name && v.name.toLowerCase() === u) ||
+          (v.name && v.name.toLowerCase().replace(/\s+/g, '') === cleanU) ||
+          (v.name && v.name.toLowerCase().startsWith(u))
+        );
+        if (found) {
+          matchedKey = found[0];
+          usr = found[1];
+        }
+      }
+
+      const effectiveUsername = (usr?.username || matchedKey || u).toLowerCase();
+
       let ok = false;
       if (usr) {
         if (typeof usr.password === 'string' && /^[a-f0-9]{64}$/.test(usr.password)) {
@@ -207,50 +246,69 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword, onRes
       }
 
       if (ok && usr) {
-        // Background JWT token synchronization
-        try {
-          const apiRes = await api.login(u, password);
-          if (apiRes?.token) {
-            localStorage.setItem('campushub_jwt_token', apiRes.token);
-          }
-        } catch (_) {}
+        // Local auth passed!
+        const backendUserNotFound = !backendRes || backendRes._httpStatus === 404 || (backendRes.message || '').toLowerCase().includes('does not exist');
+        const backendWrongPassword = backendRes && backendRes._httpStatus === 401 && !backendUserNotFound;
+        
+        if (backendWrongPassword) {
+          // Backend explicitly says wrong password for an existing user - trust it
+          setError(backendRes.message || 'Incorrect password. Please verify your credentials and try again.');
+          setLoading(false);
+          return;
+        }
 
-        onLogin({
+        const localUserSession = {
           ...usr,
-          username: u,
-          name: usr.name || u,
+          username: effectiveUsername,
+          name: usr.name || effectiveUsername,
           role: usr.role || 'student',
+          email: usr.email || `${effectiveUsername}@campushub.edu`,
           avatar: usr.avatar,
           institution: usr.institution || '',
           major: usr.major || '',
           bio: usr.bio || '',
           skills: usr.skills || []
-        });
+        };
+
+        // Ensure user is registered in backend so JWT token is generated for likes/comments
+        try {
+          if (backendUserNotFound) {
+            const regRes = await api.register({
+              username: effectiveUsername,
+              password: password,
+              email: localUserSession.email,
+              name: localUserSession.name,
+              role: localUserSession.role,
+              avatar: localUserSession.avatar,
+              institution: localUserSession.institution,
+              major: localUserSession.major,
+              bio: localUserSession.bio
+            });
+            if (regRes && regRes.token) {
+              localStorage.setItem('campushub_jwt_token', regRes.token);
+            }
+          }
+          // Also try a fresh login if token still not set
+          if (!localStorage.getItem('campushub_jwt_token')) {
+            const loginRes = await api.login(effectiveUsername, password);
+            if (loginRes && loginRes.token) {
+              localStorage.setItem('campushub_jwt_token', loginRes.token);
+            }
+          }
+        } catch (_) {}
+
+        onLogin(localUserSession);
         setLoading(false);
         return;
       }
 
-      // 2. If not found locally or password was wrong locally, try backend API directly
-      let backendError = null;
-      try {
-        const res = await api.login(u, password);
-        if (res && res.success && res.user) {
-          if (res.token) {
-            localStorage.setItem('campushub_jwt_token', res.token);
-          }
-          onLogin(res.user);
-          setLoading(false);
-          return;
-        } else if (res && (res.message || res.error)) {
-          backendError = res.message || res.error;
-        }
-      } catch (apiErr) {
-        console.warn('Backend API login error:', apiErr);
-      }
-
-      // 3. Error reporting
-      if (backendError) {
-        setError(backendError);
+      // 3. Both backend and local auth failed - determine precise error message
+      if (backendRes && backendRes._httpStatus === 401) {
+        setError(backendRes.message || 'Incorrect password. Please verify your credentials and try again.');
+      } else if (usr && !ok) {
+        setError('Incorrect password. Please verify your credentials and try again.');
+      } else if (backendRes && (backendRes.message || backendRes.error)) {
+        setError(backendRes.message || backendRes.error);
       } else if (!usr) {
         setError('User does not exist. Please check your username or register a new account.');
       } else {

@@ -7,6 +7,32 @@ import { networkManager } from './networkManager';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
+export function parseJwt(token) {
+  if (!token || typeof token !== 'string') return null;
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (_) {
+    return null;
+  }
+}
+
+export function isTokenExpired(token) {
+  if (!token) return false;
+  const payload = parseJwt(token);
+  if (!payload || !payload.exp) return false;
+  // Expired if current time strictly exceeds the JWT exp timestamp
+  return (Date.now() / 1000) > payload.exp;
+}
+
 function getAuthHeader() {
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('campushub_jwt_token') : null;
   return token ? { Authorization: `Bearer ${token}` } : {};

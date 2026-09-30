@@ -22,13 +22,22 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 def login():
     try:
         data = request.get_json() or {}
-        username = str(data.get('username', '')).strip().lower()
+        username = str(data.get('username', data.get('email', data.get('identifier', '')))).strip().lower()
         password = str(data.get('password', ''))
 
         if not username or not password:
             return jsonify({'success': False, 'message': 'Username and password are required'}), 400
 
-        user = User.query.filter_by(username=username).first()
+        clean_identifier = username.replace(' ', '')
+        user = User.query.filter(
+            (User.username.ilike(username)) |
+            (User.email.ilike(username)) |
+            (User.name.ilike(username)) |
+            (db.func.replace(User.username, ' ', '').ilike(clean_identifier)) |
+            (db.func.replace(User.name, ' ', '').ilike(clean_identifier)) |
+            (User.username.ilike(f"{username}%")) |
+            (User.name.ilike(f"{username}%"))
+        ).first()
         if not user:
             return jsonify({'success': False, 'message': 'User does not exist. Please check your username or register an account.'}), 404
         if not user.check_password(password):

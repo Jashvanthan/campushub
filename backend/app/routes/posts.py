@@ -244,28 +244,26 @@ def toggle_like(current_user, post_id):
     target_id = post.id
     existing_like = PostLike.query.filter_by(post_id=target_id, username=current_user.username).first()
 
-    # Check if this post is linked to an Idea or Workspace
-    matching_idea = db.session.get(Idea, f"idea-{target_id}")
-    if not matching_idea:
-        matching_idea = db.session.get(Idea, str(target_id))
-    if not matching_idea:
-        matching_idea = Idea.query.filter(Idea.title.ilike(post.title)).first()
-
+    # Check if this post is an idea linked to an Idea entity
+    matching_idea = None
     existing_idea_support = None
-    if matching_idea:
-        existing_idea_support = IdeaSupport.query.filter_by(idea_id=matching_idea.id, username=current_user.username).first()
+    if post.type == 'idea':
+        matching_idea = Idea.query.filter(Idea.title.ilike(post.title)).first()
+        if not matching_idea:
+            matching_idea = db.session.get(Idea, f"idea-{target_id}") or db.session.get(Idea, str(target_id))
+        if matching_idea:
+            existing_idea_support = IdeaSupport.query.filter_by(idea_id=matching_idea.id, username=current_user.username).first()
 
-    # Bidirectional Toggle: If already liked or supported in workspace, dislike/remove both; otherwise add both
-    if existing_like or (matching_idea and existing_idea_support):
-        if existing_like:
-            db.session.delete(existing_like)
+    # Toggle like based on whether this post is currently liked
+    if existing_like:
+        db.session.delete(existing_like)
         if matching_idea and existing_idea_support:
             db.session.delete(existing_idea_support)
         liked = False
     else:
         new_like = PostLike(post_id=target_id, username=current_user.username)
         db.session.add(new_like)
-        if matching_idea:
+        if matching_idea and not existing_idea_support:
             db.session.add(IdeaSupport(idea_id=matching_idea.id, username=current_user.username))
         liked = True
 

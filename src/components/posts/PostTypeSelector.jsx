@@ -50,7 +50,7 @@ export default function PostTypeSelector({ selectedType, onSelectType }) {
                 <Icon size={16} />
               </div>
               <div className="type-pill-text">
-                <span className="type-pill-title" style={{ color: isSelected ? '#fff' : 'var(--text-primary)' }}>
+                <span className="type-pill-title" style={{ color: isSelected ? t.color : 'var(--text-primary)', fontWeight: isSelected ? 700 : 500 }}>
                   {t.label}
                 </span>
               </div>
