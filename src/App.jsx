@@ -200,7 +200,9 @@ function Reveal({ children, delay = 0 }) {
 ───────────────────────────────────────────────── */
 function Toast({ message, onDone }) {
   useEffect(() => { const t = setTimeout(onDone, 5000); return () => clearTimeout(t); }, [onDone]);
-  return <div className="notification-toast">🔔 {message}</div>;
+  const displayMsg = typeof message === 'string' ? message : (typeof message === 'object' && message && message.message ? String(message.message) : '');
+  if (!displayMsg) return null;
+  return <div className="notification-toast">🔔 {displayMsg}</div>;
 }
 
 /* ─────────────────────────────────────────────────
@@ -3158,7 +3160,7 @@ export default function App() {
     try {
       localStorage.removeItem('campushub_jwt_token');
     } catch (_) {}
-    if (toastMsg) {
+    if (typeof toastMsg === 'string' && toastMsg.trim()) {
       setToast(toastMsg);
     }
     setActiveTab('all');
@@ -3492,7 +3494,7 @@ export default function App() {
                   <button className="icon-btn" title="Toggle Theme" onClick={() => setTheme(t => t==='dark'?'light':'dark')}>
                     {theme==='dark' ? <Sun size={18}/> : <Moon size={18}/>}
                   </button>
-                  <button className="icon-btn logout-btn" title="Logout" onClick={handleLogout}>
+                  <button className="icon-btn logout-btn" title="Logout" onClick={() => handleLogout()}>
                     <LogOut size={18}/>
                   </button>
                 </div>
@@ -3966,7 +3968,7 @@ export default function App() {
                     type="button"
                     className="secondary-btn"
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.55rem 1.4rem', fontWeight: 600, fontSize: '0.88rem' }}
-                    onClick={() => navTo('helpcenter')}
+                    onClick={() => setActiveTab('helpcenter')}
                   >
                     <HelpCircle size={16} /> Visit Help Center &amp; Give Feedback
                   </button>
@@ -3980,7 +3982,7 @@ export default function App() {
         ) : activeTab === 'helpcenter' ? (
           <HelpCenterPage
             session={session}
-            onBack={() => navTo('profile')}
+            onBack={() => setActiveTab('profile')}
           />
 
         /* Ideas & Contributions Page */
