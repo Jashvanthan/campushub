@@ -2,158 +2,201 @@
 
 # 🚀 CampusHub
 
-### Modern Campus Social Collaboration & Innovation Workspace Platform
+### From campus idea → team → shipped product
 
-An end-to-end fullstack platform for colleges and universities to discover campus events, pitch student engineering ideas, manage collaborative project workspaces, run code in real-time terminals, and coordinate student teams.
+**Instagram + GitHub + Unstop for college talent**, powered by a recommendation engine.
+
+[**🔗 Live Demo**](https://campushub-cyan.vercel.app/) · [**🐞 Report a Bug**](https://github.com/Jashvanthan/campushub/issues) · [**💡 Request a Feature**](https://github.com/Jashvanthan/campushub/issues)
 
 [![React 19](https://img.shields.io/badge/Frontend-React%2019-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Bundler-Vite%208-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Python](https://img.shields.io/badge/Backend-Python%20Flask-3776AB?logo=python&logoColor=white)](https://flask.palletsprojects.com/)
+[![Flask](https://img.shields.io/badge/Backend-Python%20Flask-3776AB?logo=python&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLAlchemy](https://img.shields.io/badge/ORM-SQLAlchemy%202.0-D71F00?logo=sqlalchemy&logoColor=white)](https://www.sqlalchemy.org/)
-[![EmailJS](https://img.shields.io/badge/Emails-EmailJS-FFA116?logo=mailchimp&logoColor=white)](https://www.emailjs.com/)
-[![Resend](https://img.shields.io/badge/Security-Resend%20OTP-000000?logo=resend&logoColor=white)](https://resend.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
----
+⭐ **If you like CampusHub, please star the repo. It keeps the project moving!**
 
 </div>
 
-## 📌 Table of Contents
-- [✨ Key Features](#-key-features)
-- [🏗️ System Architecture](#️-system-architecture)
-- [💻 Technology Stack](#-technology-stack)
-- [📁 Project Structure](#-project-structure)
-- [⚙️ Environment Variables](#️-environment-variables)
-- [⚡ Quick Start & Local Setup](#-quick-start--local-setup)
-- [🔐 Default Test Accounts](#-default-test-accounts)
-- [🌐 REST API Documentation](#-rest-api-documentation)
-- [🚀 Deployment Guide](#-deployment-guide)
-- [📬 Contact & Author](#-contact--author)
+---
+
+## 🎯 The Problem
+
+Every campus is full of talented students and great ideas, but most never ship. There's no single place to **pitch an idea, find the right teammates, plan the work, and get noticed**. Projects end up scattered across WhatsApp groups, GitHub repos, event portals and social media.
+
+## 💡 The Solution
+
+CampusHub brings the whole journey into one platform:
+
+| Step | What students do | Inspired by |
+|---|---|---|
+| **Discover** | Get personalized project, idea and event recommendations | Instagram, Unstop |
+| **Pitch** | Share ideas with problem, solution, impact and tech stack | Unstop |
+| **Team up** | Recruit contributors by role and review applications | GitHub |
+| **Build** | Work in auto-created workspaces with tasks, chat and code | GitHub |
+| **Get seen** | Showcase work on the campus feed | Instagram |
 
 ---
 
-## ✨ Key Features
+## 📸 Screenshots
 
-### 1. 📢 Campus Social Feed & Discovery
-* **Multi-type Posts**: Share campus projects, hackathon announcements, events, ideas, and infrastructure issues.
-* **Event Registrations**: Register for upcoming campus events and hackathons with single-click actions and external portal links.
-* **Real-time Interaction**: Heart likes, nested discussion comments, share modals, and tag-based filtering.
-* **Strict Issue Resolution & Clearing**:
-  * **Strict Permission Control**: Only the **user who posted the issue** or an **Admin** can resolve (`✔ Mark as Done` / `↩ Reopen`) or permanently clear (`Trash` / `Clear Issue`) reported issues.
-  * Real-time sync across both client and server databases.
+> Add 3–4 screenshots here: feed, idea pitch, workspace (Kanban + chat), dark/light themes.
 
-### 2. 💡 Idea Pitching & Contribution Matching
-* **Innovation Incubator**: Pitch structured campus ideas with problem statements, proposed solutions, expected impact, and required tech stacks.
-* **Role-based Team Recruitment**: Define roles needed (Frontend, Backend, AI/ML, UI/UX, QA, Hardware/IoT).
-* **Application & Review Workflow**: Students submit contribution requests with relevant skills; project owners can approve or reject applicants with instant notification alerts.
-* **Crowdsourced Support & Following**: Upvote and follow innovative ideas to receive status updates.
-
-### 3. 🛠️ Team Workspaces & Collaborative Hub
-* **Automated Workspace Provisioning**: Workspaces are automatically initialized when an idea is launched or when contributors are accepted.
-* **Kanban Task Management**: Track tasks across `TODO`, `IN_PROGRESS`, and `DONE` states with assignees, checklist items, and priority tags.
-* **Milestone Roadmaps**: Create phased sprint deliverables with progress trackers.
-* **Multi-Channel Team Chat**: Real-time channels (`#general`, `#dev-engineers`, `#design-team`, `#announcements`) with emoji reactions, message replies, code snippet attachments, and 1,000-character limits.
-* **Interactive Code Terminal**: In-browser JavaScript and Python runtime simulation with API benchmarking suites, algorithm testing, and direct "Share to Chat" integration.
-* **File & Document Repository**: Categorized asset management (Design, Architecture, Docs, Research).
-* **Activity Audit Log**: Real-time workspace audit trails of team actions, task completions, and roadmap updates.
-
-### 4. 🎨 Theme System & UI Design
-* **Dual Theme Engine**: Seamless switching between **Dark Mode** (Deep Cosmic Glassmorphism) and **Light Mode** (Modern Slate & Radiant Orange).
-* **Login Theme Switcher**: Dedicated mode changing toggle directly in the login navigation bar with animated Sun/Moon icons.
-* **Mobile Responsive Navigation**: Clean, uncluttered navbar on smartphones and tablets with auto-collapsed secondary labels and mobile-friendly touch targets.
-
-### 5. 🔑 Security, Authentication & Email Services
-* **JWT & SHA-256 Hashing**: Token-based authentication with client and server password hashing.
-* **Welcome Emails via EmailJS**: Automatically dispatches a welcome template to new users upon account registration.
-* **Resend 6-Digit OTP Password Reset**: Secure OTP code dispatched to the user's registered email with a 10-minute expiry window and automatic simulation fallback for offline development.
-* **Clean New Profiles**: Newly created user accounts initialize with clean `NA` unassigned fields (Institution, Major, Bio, Skills) instead of pre-filled mock defaults.
+<!-- ![Feed](docs/feed.png) ![Workspace](docs/workspace.png) -->
 
 ---
 
-## 🏗️ System Architecture
+## ✨ Features
+
+### 🎯 Recommendations
+Personalized suggestions of projects, ideas and events for each student.
+<!-- TODO: add 1–2 lines on how it works (e.g. skills/tags matching, activity signals) -->
+
+### 📢 Campus Feed
+- Post projects, hackathons, events, ideas and campus issues
+- Like, comment (nested replies), share, and filter by tags
+- One-click event registration with external portal links
+- **Issue tracking** where only the author or an Admin can resolve, reopen or clear an issue
+
+### 💡 Idea Incubator
+- Structured pitches: problem, solution, expected impact, tech stack
+- Role-based recruitment: Frontend, Backend, AI/ML, UI/UX, QA, Hardware/IoT
+- Apply, approve or reject workflow with instant notifications
+- Upvote and follow ideas for status updates
+
+### 🛠️ Team Workspaces
+Auto-provisioned when an idea launches or contributors are accepted:
+- **Kanban board** (TODO / IN_PROGRESS / DONE) with assignees, checklists and priorities
+- **Milestone roadmaps** with progress tracking
+- **Team chat** with channels, reactions, replies and code snippets
+- **In-browser code terminal** (JavaScript and Python) with "Share to Chat"
+- **File repository** organized by Design, Architecture, Docs and Research
+- **Activity audit log** of task and roadmap updates
+
+### 🔑 Auth and Emails
+- JWT-based authentication with role-based permissions (student, faculty, admin)
+- Welcome emails via EmailJS
+- 6-digit OTP password reset via Resend (10-minute expiry)
+
+### 🎨 Experience
+- Dark mode (cosmic glassmorphism) and light mode (slate and orange)
+- Mobile-responsive navigation and offline-friendly state with IndexedDB
+
+---
+
+## 🗺️ Roadmap
+
+| Status | Milestone |
+|---|---|
+| ✅ Done | Feed, idea incubator, team workspaces, auth, recommendations |
+| 🚧 Next | **Engagement:** video uploads with a reels-style scrolling feed for project demos |
+| 🚧 Next | **Smart team allocation:** match students to ideas by skill fit |
+| 📅 Planned | **Opportunities:** job market where recruiters discover students through real work |
+| 📅 Planned | **Investor connect:** visibility for strong student startups |
+| 📅 Planned | **AI layer:** skill-gap analysis, idea feedback, auto-generated task plans, portfolio building |
+| 🔒 Ongoing | **Security hardening:** move password hashing to bcrypt/argon2, rate limiting, input validation |
+
+**Vision:** a campus where talent is discovered, funded and hired for what it *builds*, not what's on a resume.
+
+---
+
+## 🏗️ Architecture
 
 ```mermaid
 graph TD
     Client["💻 React 19 Frontend (Vite)"]
-    Storage["💾 LocalForage / IndexedDB StorageManager"]
-    Sync["📡 BroadcastChannel Real-Time Sync"]
-    EmailJS["📧 EmailJS (Client Welcome Emails)"]
-    API["🌐 Flask REST API Server (Port 5000)"]
-    Resend["🔐 Resend API (Server OTP Verification)"]
-    DB[("🗄️ SQLite / PostgreSQL Database")]
+    Storage["💾 LocalForage / IndexedDB"]
+    Sync["📡 BroadcastChannel Sync"]
+    EmailJS["📧 EmailJS (Welcome Emails)"]
+    API["🌐 Flask REST API"]
+    Resend["🔐 Resend (OTP)"]
+    DB[("🗄️ SQLite / PostgreSQL")]
 
-    Client -->|Local Caching & Offline State| Storage
-    Client -->|Cross-Tab Synchronization| Sync
-    Client -->|Registration Welcome Dispatch| EmailJS
-    Client -->|HTTP / JSON Requests| API
-    API -->|Password Recovery OTP| Resend
-    API -->|SQLAlchemy 2.0 ORM| DB
+    Client --> Storage
+    Client --> Sync
+    Client --> EmailJS
+    Client -->|HTTP / JSON| API
+    API --> Resend
+    API -->|SQLAlchemy 2.0| DB
 ```
 
----
-
-## 💻 Technology Stack
+## 💻 Tech Stack
 
 | Layer | Technologies |
 |---|---|
-| **Frontend Framework** | React 19, Vite 8, React DOM |
-| **Email Services** | `@emailjs/browser` (Welcome Onboarding), Resend API (OTP Reset) |
-| **Styling & Effects** | Vanilla CSS Tokens, Glassmorphism UI, HTML5 Canvas VFX (WarpSpeed, Void, Sun) |
-| **Icons & UI Components** | Lucide React, Custom Portals, Popups, Modals |
-| **State & Offline Storage** | LocalForage, IndexedDB, Web BroadcastChannel API |
-| **Backend API** | Python 3.10+, Flask, Flask-CORS, PyJWT, Werkzeug Security |
-| **Database & ORM** | SQLAlchemy 2.0, SQLite (WAL mode) / PostgreSQL |
-| **Deployment & Server** | Gunicorn, Waitress, Vercel, Render, Docker |
+| Frontend | React 19, Vite 8, Lucide React, vanilla CSS tokens |
+| Offline and sync | LocalForage, IndexedDB, BroadcastChannel API |
+| Backend | Python 3.10+, Flask, Flask-CORS, PyJWT, Werkzeug |
+| Database | SQLAlchemy 2.0, SQLite (WAL) / PostgreSQL |
+| Email | EmailJS (welcome), Resend (OTP) |
+| Deployment | Vercel (frontend), Render (backend), Gunicorn, Docker |
 
----
-
-## 📁 Project Structure
+<details>
+<summary><b>📁 Project Structure</b></summary>
 
 ```
 campushub/
-├── backend/                  # Python Flask REST API
+├── backend/                  # Flask REST API
 │   ├── app/
-│   │   ├── models/           # SQLAlchemy Data Models (User, Post, Idea, Workspace, Task, Chat...)
-│   │   ├── routes/           # Blueprint Endpoints (auth, posts, ideas, workspaces, notifications...)
-│   │   ├── utils/            # JWT Helpers, Email Service, Hashing, Seed generator
-│   │   └── config.py         # App Configuration
-│   ├── requirements.txt      # Backend Python Dependencies
-│   ├── run.py                # Development Server Runner
-│   ├── seed.py               # Database Reset & Seeding Script
-│   └── wsgi.py               # WSGI Production Entrypoint
-├── src/                      # React 19 Frontend
-│   ├── components/
-│   │   ├── common/           # FormattedText, ModalPortal, PopupDialog, UserProfileModal
-│   │   ├── ideas/            # IdeasPage, IdeaCard, SubmitIdeaModal, JoinContributionModal...
-│   │   ├── posts/            # CreatePost, PostPreview, MediaUploader, DraftsModal...
-│   │   ├── workspace/        # WorkspacesPage, WorkspaceChat, WorkspaceTasks, Terminal...
-│   │   └── LoginPage.jsx     # Login, Registration & Forgot Password Modals
-│   ├── data/                 # Clean Seed Data (seedIdeasAndWorkspaces.js)
-│   ├── services/             # API client, EmailJS Service, NetworkManager, StorageManager
-│   ├── App.jsx               # Root Application Component
-│   ├── index.css             # Design System & Responsive Styling
-│   └── main.jsx              # Vite Entrypoint
-├── .env.example              # Frontend & Backend Env Variable Templates
-├── requirements.txt          # Root Python Requirements
-├── index.html                # Single Page HTML5 Template
-├── render.yaml               # Render Cloud Blueprint
-├── vercel.json               # Vercel Deployment Configuration
-└── package.json              # Frontend Node Dependencies
+│   │   ├── models/           # User, Post, Idea, Workspace, Task, Chat...
+│   │   ├── routes/           # auth, posts, ideas, workspaces, notifications
+│   │   ├── utils/            # JWT, email, hashing, seed generator
+│   │   └── config.py
+│   ├── requirements.txt
+│   ├── run.py                # Dev server
+│   ├── seed.py               # DB reset and seed
+│   └── wsgi.py               # Production entrypoint
+├── src/                      # React frontend
+│   ├── components/           # common, ideas, posts, workspace, LoginPage
+│   ├── data/                 # Seed data
+│   ├── services/             # API client, EmailJS, NetworkManager, StorageManager
+│   ├── App.jsx
+│   ├── index.css
+│   └── main.jsx
+├── .env.example
+├── render.yaml
+├── vercel.json
+└── package.json
 ```
+</details>
 
 ---
 
-## ⚙️ Environment Variables
+## ⚡ Quick Start
 
-Copy `.env.example` to `.env` in the root directory:
+**Prerequisites:** Node.js 18+, Python 3.10+, Git
+
+```bash
+git clone https://github.com/Jashvanthan/campushub.git
+cd campushub
+cp .env.example .env
+```
+
+**Frontend** (runs at `http://localhost:5173`)
+```bash
+npm install
+npm run dev
+```
+
+**Backend** (runs at `http://localhost:5000`), in a second terminal
+```bash
+python -m venv venv
+source venv/bin/activate        # Windows: .\venv\Scripts\activate
+pip install -r backend/requirements.txt
+python backend/seed.py
+python backend/run.py
+```
+
+### ⚙️ Environment Variables
 
 ```env
-# Frontend EmailJS Configuration (for Welcome Emails upon Registration)
+# Frontend
+VITE_API_URL=http://localhost:5000
 VITE_EMAILJS_SERVICE_ID=service_xxxxxxx
 VITE_EMAILJS_TEMPLATE_ID=template_xxxxxxx
 VITE_EMAILJS_PUBLIC_KEY=xxxxxxxxxxxxxxx
 
-# Backend Configuration (Flask / Python in backend/.env)
+# Backend (backend/.env)
 RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
 RESEND_FROM_EMAIL=CampusHub Security <onboarding@resend.dev>
 SECRET_KEY=your_secret_key_here
@@ -161,136 +204,56 @@ DATABASE_URL=sqlite:///campushub.db
 PORT=5000
 ```
 
----
+### 🔐 Demo Accounts (local seed data only)
 
-## ⚡ Quick Start & Local Setup
+| Role | Username | Password |
+|---|---|---|
+| Campus Admin | `admin` | `Admin@2025!` |
+| Student | `student1` | `Student@2025!` |
 
-### Prerequisites
-* **Node.js**: v18.0 or higher
-* **Python**: v3.10 or higher
-* **Git**
-
-### 1. Clone the Repository
-```bash
-git clone https://github.com/Jashvanthan/campushub.git
-cd campushub
-```
-
-### 2. Frontend Setup
-```bash
-npm install
-npm run dev
-```
-*Frontend runs at:* `http://localhost:5173`
-
-### 3. Backend Setup
-Open a second terminal:
-```bash
-# Create and activate Python virtual environment
-python -m venv venv
-
-# Windows:
-.\venv\Scripts\activate
-# macOS/Linux:
-source venv/bin/activate
-
-# Install dependencies
-pip install -r backend/requirements.txt
-
-# Seed the database
-python backend/seed.py
-
-# Run the Flask backend
-python backend/run.py
-```
-*Backend API runs at:* `http://localhost:5000`
+> ⚠️ These exist for local testing only. Change or remove them before any public deployment. You can also register your own account on the login page.
 
 ---
 
-## 🔐 Default Test Accounts
+## 🌐 API Overview
 
-Out of the box, the system is seeded with two primary accounts for testing multi-user collaboration:
+| Area | Endpoints |
+|---|---|
+| **Auth** `/api/auth` | `POST /register` · `POST /login` · `POST /forgot-password` · `POST /reset-password` · `GET /me` |
+| **Posts** `/api/posts` | `GET /` · `POST /` · `PUT /<id>` · `DELETE /<id>` · `POST /<id>/like` · `POST /<id>/comments` |
+| **Ideas** `/api/ideas` | `GET /` · `POST /` · `DELETE /<id>` · `POST /<id>/contribute` · `POST /<id>/support` |
+| **Workspaces** `/api/workspaces` | `GET /` · `GET /<id>` · `POST /<id>/leave` · `POST /<id>/tasks` · `POST /<id>/chat` · `POST /<id>/discussions` · `POST /<id>/files` |
 
-| Role | Username | Password | Purpose |
-|---|---|---|---|
-| **Campus Admin** | `admin` | `Admin@2025!` | Full administrative moderation, post management, and project oversight |
-| **Student Contributor** | `student1` | `Student@2025!` | Idea creator, project lead, workspace collaborator |
-
-> 💡 *You can also click **Register** on the login page to create custom student or faculty accounts.*
-
----
-
-## 🌐 REST API Documentation
-
-### Authentication (`/api/auth`)
-* `POST /api/auth/register` — Register a new student/faculty account.
-* `POST /api/auth/login` — Authenticate and receive JWT access token.
-* `POST /api/auth/forgot-password` — Request a 6-digit password reset verification code via Resend.
-* `POST /api/auth/reset-password` — Validate OTP and update account password.
-* `GET /api/auth/me` — Fetch current authenticated user profile.
-
-### Posts & Feed (`/api/posts`)
-* `GET /api/posts` — Retrieve paginated feed posts.
-* `POST /api/posts` — Create a new post, event, project, or issue.
-* `PUT /api/posts/<id>` — Edit post content or resolve issue (Author or Admin only).
-* `DELETE /api/posts/<id>` — Delete post and cascade cleanup (Author or Admin only).
-* `POST /api/posts/<id>/like` — Toggle like.
-* `POST /api/posts/<id>/comments` — Add comment.
-
-### Ideas & Incubation (`/api/ideas`)
-* `GET /api/ideas` — List active campus ideas.
-* `POST /api/ideas` — Submit a new idea and optionally initialize workspace.
-* `DELETE /api/ideas/<id>` — Delete idea and close associated workspace.
-* `POST /api/ideas/<id>/contribute` — Submit contribution request.
-* `POST /api/ideas/<id>/support` — Toggle student support vote.
-
-### Collaborative Workspaces (`/api/workspaces`)
-* `GET /api/workspaces` — List accessible active workspaces.
-* `GET /api/workspaces/<id>` — Get workspace details, tasks, milestones, discussions, files, and chat messages.
-* `POST /api/workspaces/<id>/leave` — Contributor leave workspace endpoint.
-* `POST /api/workspaces/<id>/tasks` — Create workspace task.
-* `POST /api/workspaces/<id>/chat` — Post message in workspace channel.
-* `POST /api/workspaces/<id>/discussions` — Start discussion thread.
-* `POST /api/workspaces/<id>/files` — Upload document/asset metadata.
+Edit and delete on posts are restricted to the author or an Admin.
 
 ---
 
-## 🚀 Deployment Guide
+## 🚀 Deployment
 
-### Vercel (Frontend)
-1. Push your repository to GitHub.
-2. Import repository in [Vercel Dashboard](https://vercel.com).
-3. Set Framework Preset to **Vite**.
-4. Set Build Command to `npm run build` and Output Directory to `dist`.
-5. Add Environment Variables:
-   - `VITE_API_URL=https://your-backend-service.onrender.com`
-   - `VITE_EMAILJS_SERVICE_ID=...`
-   - `VITE_EMAILJS_TEMPLATE_ID=...`
-   - `VITE_EMAILJS_PUBLIC_KEY=...`
+**Frontend on Vercel:** import the repo, set preset to **Vite**, build command `npm run build`, output `dist`, and add the `VITE_*` variables.
 
-### Render (Backend)
-1. Connect your GitHub repository to [Render](https://render.com).
-2. Create a new **Web Service** with:
-   - **Runtime**: `Python 3`
-   - **Build Command**: `pip install -r backend/requirements.txt`
-   - **Start Command**: `gunicorn -w 4 -b 0.0.0.0:$PORT backend.wsgi:app`
-3. Add Environment Variables:
-   - `FLASK_ENV=production`
-   - `SECRET_KEY=your-secure-random-key`
-   - `RESEND_API_KEY=your-resend-api-key`
-   - `CORS_ORIGINS=https://your-app.vercel.app`
+**Backend on Render:** create a Python web service.
+- Build: `pip install -r backend/requirements.txt`
+- Start: `gunicorn -w 4 -b 0.0.0.0:$PORT backend.wsgi:app`
+- Env: `FLASK_ENV=production`, `SECRET_KEY`, `RESEND_API_KEY`, `CORS_ORIGINS=https://your-app.vercel.app`
 
 ---
 
-## 📬 Contact & Author
+## 🤝 Contributing
 
-* **Author**: Jashvanthan A
-* **Email**: [jashvan467@gmail.com](mailto:jashvan467@gmail.com)
-* **LinkedIn**: [linkedin.com/in/jashvanthan-ashok-90ba60338](https://www.linkedin.com/in/jashvanthan-ashok-90ba60338)
-* **GitHub**: [@Jashvanthan](https://github.com/Jashvanthan)
+Contributions, issues and feature requests are welcome.
+1. Fork the repo and create a branch: `git checkout -b feature/your-feature`
+2. Commit your changes and open a Pull Request
 
----
+## 💬 Feedback
+
+Tried the app? I'd love to hear what worked, what broke and what's missing. Open an [issue](https://github.com/Jashvanthan/campushub/issues) or reach out below.
+
+## 📬 Author
+
+**Jashvanthan A**, third-year CSE student
+[LinkedIn](https://www.linkedin.com/in/jashvanthan-ashok-90ba60338) · [GitHub](https://github.com/Jashvanthan) · [Email](mailto:jashvan467@gmail.com)
 
 <div align="center">
-  <sub>Built with ❤️ for student innovators, engineers, and creators.</sub>
+  <sub>Built with ❤️ for student innovators, engineers and creators. If this helped you, ⭐ the repo!</sub>
 </div>
